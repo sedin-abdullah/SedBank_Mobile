@@ -68,13 +68,70 @@ function prefixGeometry(prefix) {
   };
 }
 
+/**
+ * Numeric fields are rendered as text, deliberately.
+ *
+ * `<input type="number">` is exposed to Android's accessibility tree as a
+ * **spinbutton**: the node advertises `ACTION_SET_PROGRESS` and not
+ * `ACTION_SET_TEXT`. Any native automation driving the app — Appium,
+ * UiAutomator2, the Sedstart runner — then calls SET_PROGRESS and gets
+ * `invalid element state`, so the field cannot be filled at all on a device.
+ * It is also worse for people: a spinner nobody wants, and a value that
+ * changes when the wheel scrolls over it.
+ *
+ * `type="text"` with `inputMode` keeps the phone's numeric keypad and stays a
+ * plain EditText. Keystrokes are filtered here so callers still only ever see
+ * digits, which is what `type="number"` was buying.
+ */
+function numericProps({ type, inputMode, step, onChange }) {
+  if (type !== 'number') return { type, inputMode, onChange };
+
+  const decimals = step !== undefined && String(step) !== '1';
+
+  return {
+    type: 'text',
+    inputMode: inputMode || (decimals ? 'decimal' : 'numeric'),
+    onChange: (event) => {
+      const cleaned = decimals
+        ? // One decimal point, digits either side.
+          event.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
+        : event.target.value.replace(/\D/g, '');
+
+      if (cleaned !== event.target.value) event.target.value = cleaned;
+      onChange?.(event);
+    },
+  };
+}
+
 export const Input = forwardRef(function Input(
-  { label, name, error, hint, required, className, testId, prefix, style, ...props },
+  {
+    label,
+    name,
+    error,
+    hint,
+    required,
+    className,
+    testId,
+    prefix,
+    style,
+    type = 'text',
+    inputMode,
+    // Browser-side constraints on a number input; meaningless on a text one,
+    // and invalid HTML if forwarded. Validation lives in the form and the API.
+    min,
+    max,
+    step,
+    onChange,
+    ...props
+  },
   ref
 ) {
   const generatedId = useId();
   const id = name || generatedId;
   const { padding, divided } = prefixGeometry(prefix);
+  const numeric = numericProps({ type, inputMode, step, onChange });
+  void min;
+  void max;
 
   return (
     <FieldShell label={label} htmlFor={id} error={error} hint={hint} required={required} className={className}>
@@ -99,6 +156,9 @@ export const Input = forwardRef(function Input(
           aria-describedby={error ? fieldErrorId(id) : undefined}
           className={controlClasses(error, 'h-10')}
           style={padding ? { paddingLeft: padding, ...style } : style}
+          type={numeric.type}
+          inputMode={numeric.inputMode}
+          onChange={numeric.onChange}
           {...props}
         />
       </div>
