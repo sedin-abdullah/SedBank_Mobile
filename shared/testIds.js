@@ -27,6 +27,9 @@ export const rowId = (module, id) => `${module}-row-${id}`;
 export const cellId = (module, id, field) => `${module}-row-${id}-${field}`;
 export const actionId = (module, id, action) => `${module}-row-${id}-${action}-btn`;
 export const fieldError = (field) => `field-error-${field}`;
+/** Bottom-tab item, phones only. Paired with navId/mobile-nav for the drawer. */
+export const tabId = (key) => `app-tab-${key}`;
+
 export const navId = (key, mobile = false) => `${mobile ? 'mobile' : 'sidebar'}-nav-${key}`;
 export const stepId = (key) => `application-stepper-step-${key}`;
 export const bucketCardId = (bucket) => `admin-collections-bucket-${bucket}-card`;
@@ -55,6 +58,8 @@ export const TESTIDS = {
     pageTitle: 'app-page-title',
     breadcrumb: 'app-breadcrumb',
     connectionStatus: 'app-realtime-status',
+    tabBar: 'app-tab-bar',
+    tabMore: 'app-tab-more-btn',
   },
 
   common: {
@@ -107,6 +112,7 @@ export const TESTIDS = {
     demoCredit: 'login-demo-credit-btn',
     demoOps: 'login-demo-ops-btn',
     demoCollections: 'login-demo-collections-btn',
+    biometric: 'login-biometric-btn',
   },
 
   register: {
@@ -210,6 +216,7 @@ export const TESTIDS = {
     documentsSection: 'customer-application-documents-section',
     documentTypeSelect: 'customer-application-document-type-select',
     documentFileInput: 'customer-application-document-file-input',
+    documentCapture: 'customer-application-document-capture-btn',
     documentUpload: 'customer-application-document-upload-btn',
     documentsTable: 'customer-application-documents-table',
     documentRow: 'customer-application-documents', // + -row-{id}

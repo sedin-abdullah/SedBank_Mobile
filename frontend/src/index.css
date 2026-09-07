@@ -37,6 +37,18 @@
 
     --glass-blur: 16px;
     --glass-blur-dense: 8px;
+
+    /* Device insets. Zero in a browser; the notch/home-indicator on a phone. */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+
+    /* Published by the Keyboard listener in lib/native.js. */
+    --keyboard-height: 0px;
+
+    /* Height of the mobile tab bar, so content can clear it. */
+    --tabbar-height: 3.75rem;
   }
 
   html {
@@ -342,5 +354,157 @@
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply rounded-full bg-slate-300;
+  }
+}
+
+
+/* =====================================================================
+ * Mobile shell — safe areas, keyboard, performance and power
+ *
+ * All of this is inert in a browser: the insets resolve to 0px, and the
+ * `is-native` / `perf-lite` / `app-paused` classes are only ever set by
+ * lib/native.js inside the Capacitor WebView.
+ * ================================================================== */
+
+@layer components {
+  /** Padding that clears the notch and status bar. */
+  .safe-top {
+    padding-top: var(--safe-top);
+  }
+  .safe-bottom {
+    padding-bottom: var(--safe-bottom);
+  }
+  .safe-x {
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+  }
+
+  /**
+   * Bottom tab bar. Sits above the home indicator, and lifts out of the way
+   * when the keyboard is up so it never floats mid-screen over a form.
+   */
+  .tabbar {
+    padding-bottom: var(--safe-bottom);
+    background: rgba(24, 11, 16, 0.92);
+    border-top: 1px solid var(--hairline);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+  html.keyboard-open .tabbar {
+    display: none;
+  }
+
+  /**
+   * Scroll padding so a focused field is never left under the keyboard.
+   * Paired with the scrollIntoView in the keyboard listener.
+   */
+  html.keyboard-open body {
+    padding-bottom: var(--keyboard-height);
+  }
+}
+
+@layer utilities {
+  /**
+   * Cheap rendering path for mid-range Android WebViews.
+   *
+   * `backdrop-filter` resamples everything behind the element on every
+   * frame, which is what drops frames while scrolling a long table. The
+   * surfaces keep a translucent fill so the design still reads as glass —
+   * only the live resampling goes. `!important` because it has to beat the
+   * Tailwind backdrop-blur-* utilities applied inline on components.
+   */
+  html.perf-lite .glass,
+  html.perf-lite .glass-strong,
+  html.perf-lite .glass-dense,
+  html.perf-lite .card,
+  html.perf-lite .tabbar,
+  html.perf-lite [class*='backdrop-blur'] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Flat fills chosen to sit where the composited glass used to land. */
+  html.perf-lite .glass,
+  html.perf-lite .card {
+    background-image: none;
+    background-color: #241219;
+  }
+  html.perf-lite .glass-strong {
+    background-image: none;
+    background-color: #2b1620;
+  }
+  html.perf-lite .glass-dense {
+    background-color: #211016;
+  }
+
+  /**
+   * Most surfaces here are built from Tailwind utilities rather than the
+   * .glass classes — `bg-white/[0.06] backdrop-blur-heavy` and friends. A 6%
+   * white wash only reads as a panel *because* the blur lifts it off the
+   * backdrop; take the blur away and it all but disappears. So give those the
+   * same flat fill, addressed by the blur utility that marks them as glass.
+   *
+   * The scrim behind the drawer is excluded: it is meant to stay translucent,
+   * being a dimming layer rather than a panel.
+   */
+  html.perf-lite [class*='backdrop-blur']:not([class*='canvas-deep']) {
+    background-image: none;
+    background-color: #241219;
+  }
+
+  /* The ambient blobs are the other per-frame cost; drop them entirely. */
+  html.perf-lite .orb {
+    display: none;
+  }
+
+  /**
+   * Backgrounded: stop every decorative animation. The drift, node pulse and
+   * connector flow would otherwise keep compositing while nobody is looking,
+   * which on a phone is battery for nothing.
+   */
+  html.app-paused .orb,
+  html.app-paused .animate-drift,
+  html.app-paused .animate-drift-slow,
+  html.app-paused .animate-node-pulse,
+  html.app-paused .animate-pulse-glow,
+  html.app-paused .animate-spin-slow,
+  html.app-paused .connector-h,
+  html.app-paused .connector-v {
+    animation-play-state: paused !important;
+  }
+}
+
+/* =====================================================================
+ * Touch targets
+ *
+ * The desktop sizes are fine with a cursor and too small with a thumb. On a
+ * coarse pointer every control gets at least 44px in both axes — the demo
+ * role buttons (36px tall) and the small icon actions in table rows were the
+ * worst offenders. Opt a control out with `.tap-exempt` when it is genuinely
+ * decorative.
+ * ================================================================== */
+
+@media (pointer: coarse) {
+  button:not(.tap-exempt),
+  [role='button']:not(.tap-exempt),
+  a[data-testid]:not(.tap-exempt),
+  select:not(.tap-exempt),
+  input[type='checkbox']:not(.tap-exempt) {
+    min-height: 44px;
+  }
+
+  /* Icon-only controls need the width too, not just the height. */
+  button.h-8:not(.tap-exempt),
+  button.h-9:not(.tap-exempt),
+  button.w-8:not(.tap-exempt) {
+    min-width: 44px;
+  }
+
+  /* Checkboxes stay visually small but gain a padded hit area. */
+  input[type='checkbox']:not(.tap-exempt) {
+    min-width: 44px;
+    margin-inline: -14px;
+    padding-inline: 14px;
+    background-clip: content-box;
   }
 }

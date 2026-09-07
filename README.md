@@ -16,6 +16,7 @@ integration is simulated; no real financial or personal data is processed.
 | [docs/CREDENTIALS.md](docs/CREDENTIALS.md) | The five demo logins and what each role can do |
 | [docs/API.md](docs/API.md) | All 79 endpoints with their access rules |
 | [docs/TECH_STACK.md](docs/TECH_STACK.md) | Architecture, libraries, testing, deployment |
+| [docs/MOBILE.md](docs/MOBILE.md) | The Android app — building it, and what is mobile-specific |
 
 ## Run it locally
 
@@ -42,6 +43,7 @@ npm run test:unit    # 46 Jest tests — EMI maths, underwriting rules
 npm run test:api     # 303 assertions over 98 requests (Newman)
 npm run test:e2e     # 87 Playwright tests across desktop, tablet and phone
 npm test             # all three
+npm run test:mobile  # 32 Appium tests on the Android app (needs an emulator)
 ```
 
 Both integration suites boot their own throwaway API, so nothing needs to be
@@ -53,6 +55,10 @@ running first. For the e2e suite, install browsers once with
 **Two portals from one shell.** Borrowers get `/app`; credit, ops, collections
 and admin staff get `/admin`, with navigation filtered per role and the same
 rules enforced server-side.
+
+**An Android app from the same build.** Capacitor wraps the SPA, so every screen
+and role is present on a phone — with a bottom tab bar instead of a sidebar,
+camera KYC capture and biometric sign-in. See [docs/MOBILE.md](docs/MOBILE.md).
 
 **A real rule engine.** Bureau score, income floor and FOIR decide between
 straight-through approval, an officer's queue, and rejection — then price the

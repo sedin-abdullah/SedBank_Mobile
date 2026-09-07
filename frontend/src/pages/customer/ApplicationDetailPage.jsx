@@ -24,6 +24,7 @@ import {
   ArrowRight,
   Ban,
   ExternalLink,
+  Camera as CameraIcon,
 } from 'lucide-react';
 import { TESTIDS, rowId } from '@shared/testIds.js';
 import { PageHeader } from '../../components/layout/AppShell.jsx';
@@ -49,6 +50,7 @@ import {
   BUREAU_SIMULATIONS,
 } from '../../lib/constants.js';
 import { fieldErrorsOf, cn } from '../../lib/utils.js';
+import { IS_NATIVE, captureDocument } from '../../lib/native.js';
 
 const SCORE_TONE = (score) => {
   if (score >= 750) return 'success';
@@ -108,6 +110,23 @@ export default function ApplicationDetailPage() {
    * so this fetches them with the session token rather than letting the
    * browser navigate — a plain link would arrive unauthenticated.
    */
+  /**
+   * Captures a document with the device camera. Photographing a payslip is
+   * the natural action on a phone; the file picker stays for anything
+   * already saved, and both feed the same upload.
+   */
+  const takePhoto = async () => {
+    try {
+      const captured = await captureDocument({ source: 'camera' });
+      if (!captured) return; // cancelled
+      setFile(captured);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      toast.info('Photo captured', 'Press Upload to send it for verification.');
+    } catch (err) {
+      toast.error('Could not open the camera', err.message);
+    }
+  };
+
   const openDocument = async (doc) => {
     try {
       await http.openFile(`/documents/${doc._id}/file`);
@@ -458,6 +477,25 @@ export default function ApplicationDetailPage() {
                         data-testid={TESTIDS.applicationDetail.documentFileInput}
                         className="block h-10 w-full cursor-pointer rounded-lg border border-white/10 bg-white/[0.06] text-sm text-slate-600 backdrop-blur-glass file:mr-3 file:h-full file:cursor-pointer file:rounded-l-lg file:border-0 file:bg-white/10 file:px-3 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-white/20"
                       />
+
+                      {IS_NATIVE ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={CameraIcon}
+                          className="mt-2 w-full"
+                          onClick={takePhoto}
+                          data-testid={TESTIDS.applicationDetail.documentCapture}
+                        >
+                          Take a photo instead
+                        </Button>
+                      ) : null}
+
+                      {file ? (
+                        <p className="mt-2 truncate text-xs text-slate-500">
+                          Selected: {file.name}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 

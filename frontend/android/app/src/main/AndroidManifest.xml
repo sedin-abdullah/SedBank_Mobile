@@ -38,4 +38,17 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- KYC document capture. The camera is optional so the app still
+         installs on a device without one; the file picker remains. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- Biometric sign-in for returning users. USE_FINGERPRINT covers
+         API < 28, USE_BIOMETRIC everything since. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+    <!-- Loan-status and EMI-reminder pushes. Runtime-prompted from API 33. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

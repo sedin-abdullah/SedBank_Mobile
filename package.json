@@ -2,7 +2,7 @@
   "name": "sedbank",
   "version": "1.0.0",
   "private": true,
-  "description": "SedBank — digital lending platform (Personal Loan lifecycle) for Sedin Technologies.",
+  "description": "SedBank \u2014 digital lending platform (Personal Loan lifecycle) for Sedin Technologies.",
   "type": "module",
   "workspaces": [
     "backend",
@@ -13,15 +13,12 @@
   },
   "scripts": {
     "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
-
     "dev": "concurrently -n api,web -c blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "npm --prefix backend run dev",
     "dev:web": "npm --prefix frontend run dev",
-
     "build": "npm --prefix frontend run build",
     "start": "npm --prefix backend run start",
     "seed": "npm --prefix backend run seed",
-
     "test": "npm run test:unit && npm run test:api && npm run test:e2e",
     "test:unit": "npm --prefix backend test",
     "test:api": "node qa/postman/run-newman.mjs",
@@ -29,14 +26,15 @@
     "test:e2e:desktop": "playwright test --project=desktop-chrome",
     "test:e2e:mobile": "playwright test --project=iphone-13 --project=ipad-mini",
     "test:e2e:ui": "playwright test --ui",
+    "test:mobile": "node mobile-e2e/run.mjs",
     "test:report": "playwright show-report",
-
     "playwright:install": "playwright install chromium webkit"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",
     "concurrently": "^9.1.2",
     "newman": "^6.2.1",
-    "wait-on": "^8.0.1"
+    "wait-on": "^8.0.1",
+    "webdriverio": "^9.31.5"
   }
 }

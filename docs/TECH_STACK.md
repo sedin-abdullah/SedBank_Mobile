@@ -1,14 +1,18 @@
 # Tech stack
 
 A two-package npm workspace: an Express API and a Vite React SPA, with a shared
-testid catalogue between them.
+testid catalogue between them. The Android app is the same SPA build inside a
+Capacitor WebView, not a second codebase.
 
 ```
 sedbank/
 ├── backend/          Express + Mongoose API, Socket.IO
 ├── frontend/         React + Vite SPA
+│   ├── android/      Capacitor Android project (Gradle)
+│   └── src/lib/native.js   native capabilities, inert in a browser
 ├── shared/           testIds.js — imported by the app AND the tests
 ├── e2e/              Playwright specs (7 files)
+├── mobile-e2e/       Appium / UiAutomator2 suite
 ├── qa/postman/       Newman API collection
 ├── render.yaml       API deployment blueprint
 └── frontend/vercel.json
@@ -64,7 +68,7 @@ config header explains it.
 
 ## Testing
 
-Three layers, all runnable from the repo root:
+Four layers, all runnable from the repo root:
 
 | Command | What it covers |
 |---|---|
@@ -72,12 +76,27 @@ Three layers, all runnable from the repo root:
 | `npm run test:api` | 98 requests / 303 assertions, Newman. Boots a throwaway API itself |
 | `npm run test:e2e` | 87 Playwright tests — 29 specs × desktop, iPad Mini, iPhone 13 |
 | `npm test` | all three in sequence |
+| `npm run test:mobile` | 32 Appium tests on the Android app — needs an emulator |
 
 Both test suites spin up their own API against an in-memory database, so
 neither needs a running server or touches real data.
 
 Element lookups go through `shared/testIds.js` — the same module the components
 import — so no testid string is ever duplicated between the app and the tests.
+
+## Android
+
+| | |
+|---|---|
+| Shell | Capacitor 6 (`androidScheme: https` ⇒ WebView origin `https://localhost`) |
+| Plugins | App, Device, Keyboard, SplashScreen, StatusBar, Camera, PushNotifications, `capacitor-native-biometric` |
+| Build | Gradle wrapper in `frontend/android` |
+| Tests | Appium 3 + UiAutomator2, driven through WebdriverIO |
+
+`VITE_API_URL` is inlined at build time and **must** be an absolute, reachable
+URL — inside the WebView `localhost` is the phone, not your machine.
+[MOBILE.md](MOBILE.md) covers the build, the mobile-only adaptations and the
+native capabilities.
 
 ## Local development
 

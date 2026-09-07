@@ -137,3 +137,36 @@ export function groupNav(items) {
 }
 
 export default { CUSTOMER_NAV, ADMIN_NAV, navForRole, groupNav };
+
+/**
+ * The destinations that get a bottom tab on a phone.
+ *
+ * A bottom bar can hold four before the labels stop being readable, and the
+ * fifth slot is always "More", which opens the same drawer that holds the
+ * full role-filtered list. Everything remains reachable — the tabs are a
+ * shortcut to the frequent screens, not a reduced feature set.
+ */
+const TAB_PRIORITY = {
+  customer: ['dashboard', 'applications', 'loans', 'payments'],
+  admin: ['dashboard', 'applications', 'documents', 'loans'],
+  credit_officer: ['dashboard', 'applications', 'documents', 'loans'],
+  ops_officer: ['dashboard', 'applications', 'documents', 'loans'],
+  collections_officer: ['dashboard', 'collections', 'loans', 'profile'],
+};
+
+/** Up to four tab items for this role, in priority order, from its own nav. */
+export function tabsForRole(role, items) {
+  const wanted = TAB_PRIORITY[role] || TAB_PRIORITY.admin;
+  const byKey = new Map(items.map((item) => [item.key, item]));
+  const picked = wanted.map((key) => byKey.get(key)).filter(Boolean);
+
+  // A role whose nav is shorter than the priority list falls back to its own
+  // first few items, so the bar is never half-empty.
+  if (picked.length < 4) {
+    for (const item of items) {
+      if (picked.length >= 4) break;
+      if (!picked.includes(item)) picked.push(item);
+    }
+  }
+  return picked.slice(0, 4);
+}

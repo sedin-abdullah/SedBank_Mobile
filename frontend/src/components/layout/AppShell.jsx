@@ -22,14 +22,15 @@ import {
   ChevronDown,
   Wifi,
   WifiOff,
+  MoreHorizontal,
 } from 'lucide-react';
-import { TESTIDS, navId } from '@shared/testIds.js';
+import { TESTIDS, navId, tabId } from '@shared/testIds.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useSocket } from '../../context/SocketContext.jsx';
 import { ROLE_LABELS, ROLES } from '../../lib/constants.js';
 import { initials } from '../../lib/format.js';
 import { cn } from '../../lib/utils.js';
-import { navForRole, groupNav } from './navigation.js';
+import { navForRole, groupNav, tabsForRole } from './navigation.js';
 import NotificationBell from './NotificationBell.jsx';
 
 function Brand({ collapsed = false }) {
@@ -107,6 +108,56 @@ function PortalFooter({ user, collapsed }) {
         </p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Bottom tab bar, phones only.
+ *
+ * A shrunken desktop sidebar is not a mobile nav: the targets end up small
+ * and at the top of a screen held at the bottom. Four frequent destinations
+ * live here at 56px tall, thumb-height, and "More" opens the drawer with the
+ * complete role-filtered list — so nothing is unreachable.
+ */
+function TabBar({ items, role, onMore }) {
+  const tabs = tabsForRole(role, items);
+
+  return (
+    <nav
+      data-testid={TESTIDS.shell.tabBar}
+      aria-label="Primary"
+      className="tabbar fixed inset-x-0 bottom-0 z-40 flex lg:hidden"
+    >
+      {tabs.map((item) => (
+        <NavLink
+          key={item.key}
+          to={item.to}
+          end={item.end}
+          data-testid={tabId(item.key)}
+          className={({ isActive }) =>
+            cn(
+              // 56px tall: comfortably past the 44px minimum touch target.
+              'flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-medium transition-colors',
+              isActive ? 'text-gold-400' : 'text-slate-500 active:text-slate-800'
+            )
+          }
+        >
+          <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+          <span className="max-w-full truncate">{item.label.split(' ')[0]}</span>
+        </NavLink>
+      ))}
+
+      <button
+        type="button"
+        onClick={onMore}
+        data-testid={TESTIDS.shell.tabMore}
+        aria-label="More navigation"
+        className="flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[10px] font-medium text-slate-500 transition-colors active:text-slate-800"
+      >
+        <MoreHorizontal className="h-5 w-5 shrink-0" aria-hidden="true" />
+        <span>More</span>
+      </button>
+    </nav>
   );
 }
 
@@ -233,7 +284,7 @@ export default function AppShell({ portal }) {
           />
           <aside
             data-testid={TESTIDS.shell.mobileNavDrawer}
-            className="absolute inset-y-0 left-0 flex w-[min(84vw,17rem)] flex-col border-r border-white/10 bg-canvas-raised/90 shadow-panel backdrop-blur-heavy"
+            className="safe-top safe-bottom absolute inset-y-0 left-0 flex w-[min(84vw,17rem)] flex-col border-r border-white/10 bg-canvas-raised/90 shadow-panel backdrop-blur-heavy"
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
@@ -261,7 +312,7 @@ export default function AppShell({ portal }) {
       <div className={cn('flex min-h-screen flex-col', collapsed ? 'lg:pl-[72px]' : 'lg:pl-64')}>
         <header
           data-testid={TESTIDS.shell.topbar}
-          className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-white/[0.06] px-4 backdrop-blur-heavy sm:px-6"
+          className="safe-top safe-x sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-white/[0.06] px-4 backdrop-blur-heavy sm:px-6"
         >
           <button
             type="button"
@@ -362,13 +413,15 @@ export default function AppShell({ portal }) {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+        <main className="safe-x flex-1 px-4 py-6 pb-[calc(var(--tabbar-height)+var(--safe-bottom)+1rem)] sm:px-6 sm:py-8 lg:px-10 lg:pb-8">
           <div className="mx-auto w-full max-w-7xl">
             <Outlet />
           </div>
         </main>
 
-        <footer className="border-t border-white/10 px-4 py-4 text-center text-[11px] text-slate-500">
+        <TabBar items={items} role={user?.role} onMore={() => setDrawerOpen(true)} />
+
+        <footer className="safe-x border-t border-white/10 px-4 py-4 text-center text-[11px] text-slate-500 lg:pb-4">
           SedBank is a demonstration platform. All integrations are simulated and no real financial
           data is processed.
         </footer>

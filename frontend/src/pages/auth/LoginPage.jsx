@@ -5,9 +5,9 @@
  * is shown in a clearly-labelled demo hint so the flow can be completed (and
  * automated) without an SMS vendor.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, Smartphone, KeyRound, ArrowLeft } from 'lucide-react';
+import { LogIn, Smartphone, KeyRound, ArrowLeft, Fingerprint } from 'lucide-react';
 import { TESTIDS } from '@shared/testIds.js';
 import AuthLayout from './AuthLayout.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -18,6 +18,13 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { http } from '../../lib/api.js';
 import { DEMO_ACCOUNTS, isStaff } from '../../lib/constants.js';
 import { fieldErrorsOf, cn } from '../../lib/utils.js';
+import {
+  IS_NATIVE,
+  biometricAvailability,
+  hasBiometricCredentials,
+  enrolBiometric,
+  biometricSignIn,
+} from '../../lib/native.js';
 
 const SHOW_DEMO = import.meta.env.VITE_SHOW_DEMO_LOGINS !== 'false';
 
@@ -44,6 +51,31 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  /**
+   * Biometric sign-in is offered only once the device supports it AND the
+   * user has already signed in with a password at least once — there is
+   * nothing to unlock before that.
+   */
+  const [biometric, setBiometric] = useState({ available: false, enrolled: false, kind: '' });
+
+  useEffect(() => {
+    if (!IS_NATIVE) return;
+    let cancelled = false;
+    (async () => {
+      const info = await biometricAvailability();
+      const enrolled = info ? await hasBiometricCredentials() : false;
+      if (cancelled) return;
+      setBiometric({
+        available: !!info,
+        enrolled,
+        kind: info?.biometryType === 2 ? 'Face' : 'Fingerprint',
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const goHome = (user) => navigate(isStaff(user.role) ? '/admin' : '/app', { replace: true });
 
   /** Client-side checks mirror the server's, purely for faster feedback. */
@@ -64,6 +96,20 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const user = await login({ email: form.email.trim().toLowerCase(), password: form.password });
+
+      // Enrol silently once the password has proved itself. The credentials
+      // go into the device keystore, never into app storage.
+      if (biometric.available && !biometric.enrolled) {
+        try {
+          await enrolBiometric({
+            email: form.email.trim().toLowerCase(),
+            password: form.password,
+          });
+        } catch {
+          /* enrolment is a convenience; never block sign-in on it */
+        }
+      }
+
       toast.success(`Welcome back, ${user.name.split(' ')[0]}`);
       goHome(user);
     } catch (err) {
@@ -134,6 +180,23 @@ export default function LoginPage() {
     setForm({ email: account.email, password: account.password });
   };
 
+  const signInWithBiometric = async () => {
+    setError('');
+    const credentials = await biometricSignIn();
+    if (!credentials) return; // cancelled or not recognised — not an error
+
+    setBusy(true);
+    try {
+      const user = await login(credentials);
+      toast.success(`Welcome back, ${user.name.split(' ')[0]}`);
+      goHome(user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const switchMode = (next) => {
     setMode(next);
     setError('');
@@ -189,6 +252,25 @@ export default function LoginPage() {
         {error ? (
           <div className="mb-4" data-testid={TESTIDS.login.error}>
             <FormError message={error} />
+          </div>
+        ) : null}
+
+        {biometric.available && biometric.enrolled ? (
+          <div className="mb-5">
+            <Button
+              variant="secondary"
+              fullWidth
+              size="lg"
+              icon={Fingerprint}
+              disabled={busy}
+              onClick={signInWithBiometric}
+              data-testid={TESTIDS.login.biometric}
+            >
+              Sign in with {biometric.kind}
+            </Button>
+            <p className="mt-2 text-center text-xs text-slate-500">
+              or use your {mode === 'password' ? 'password' : 'mobile number'} below
+            </p>
           </div>
         ) : null}
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wine Reserve, mirroring frontend/tailwind.config.js. -->
+<resources>
+    <color name="canvas">#180B10</color>
+    <color name="wine">#9F1239</color>
+    <color name="rose">#BE185D</color>
+    <color name="gold">#D4AF37</color>
+    <color name="ink">#F8FAFC</color>
+
+    <color name="colorPrimary">#9F1239</color>
+    <color name="colorPrimaryDark">#180B10</color>
+    <color name="colorAccent">#BE185D</color>
+
+    <color name="ic_launcher_background">#9F1239</color>
+</resources>

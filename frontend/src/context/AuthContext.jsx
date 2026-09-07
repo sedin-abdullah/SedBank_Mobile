@@ -6,6 +6,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { http, setToken, getToken, setUnauthorizedHandler } from '../lib/api.js';
+import { IS_NATIVE, registerPush, onPushToken } from '../lib/native.js';
 import { isStaff } from '../lib/constants.js';
 
 const AuthContext = createContext(null);
@@ -21,6 +22,35 @@ export function AuthProvider({ children }) {
     setStatus('anonymous');
     queryClient.clear();
   }, [queryClient]);
+
+  /**
+   * Push registration waits for a signed-in user — prompting for
+   * notification permission on a sign-in screen asks before there is
+   * anything to notify anyone about.
+   *
+   * Delivery needs a Firebase project and google-services.json. Without one
+   * this resolves to `{ granted: false, reason: 'no-firebase' }` and the app
+   * carries on: notifications are still visible in the in-app bell.
+   */
+  useEffect(() => {
+    if (!IS_NATIVE || !user) return undefined;
+
+    let stop = () => {};
+    (async () => {
+      const result = await registerPush({
+        onNotification: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+      });
+      if (result.granted) {
+        stop = onPushToken((token) => {
+          // The device token is only useful to a backend that sends pushes;
+          // logged for now so wiring it up is a one-line change later.
+          console.info('[push] device token acquired', token?.slice(0, 12), '…');
+        });
+      }
+    })();
+
+    return () => stop();
+  }, [user, queryClient]);
 
   // Any 401 from the API (other than a failed login) ends the session.
   useEffect(() => {
