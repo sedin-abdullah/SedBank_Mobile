@@ -58,7 +58,9 @@ rules enforced server-side.
 
 **An Android app from the same build.** Capacitor wraps the SPA, so every screen
 and role is present on a phone — with a bottom tab bar instead of a sidebar,
-camera KYC capture and biometric sign-in. See [docs/MOBILE.md](docs/MOBILE.md).
+camera KYC capture and biometric sign-in.
+[Download the APK](https://github.com/sedin-abdullah/SedBank_Mobile/releases/download/v1.0.0-android/sedbank-android-debug.apk),
+or see [docs/MOBILE.md](docs/MOBILE.md) to build it.
 
 **A real rule engine.** Bureau score, income floor and FOIR decide between
 straight-through approval, an officer's queue, and rejection — then price the

@@ -5,6 +5,23 @@ There is no second codebase and no parallel component tree: every screen, route,
 role and permission is the same build that ships to the web, so feature parity
 holds by construction rather than by discipline.
 
+## Download it
+
+[**sedbank-android-debug.apk**](https://github.com/sedin-abdullah/SedBank_Mobile/releases/download/v1.0.0-android/sedbank-android-debug.apk)
+— open it on the phone and allow the install when Android asks. Sign in with any
+account from [CREDENTIALS.md](CREDENTIALS.md).
+
+It is a debug build, which is right for sideloading a demo and wrong for a store
+release; see [Build and run](#build-and-run) for a signed one. The app talks to
+the deployed API, which sleeps on Render's free tier, so the first sign-in after
+an idle spell can take ~30s.
+
+> **Not Expo.** Expo/EAS builds React Native projects. This app is the web SPA
+> in a Capacitor WebView with its own Gradle project, so there is nothing for
+> Expo to build — putting it there would mean rewriting the frontend in React
+> Native. GitHub Releases is the equivalent for handing someone an APK, which is
+> what the link above is.
+
 What is genuinely mobile lives in three places:
 
 | | |
