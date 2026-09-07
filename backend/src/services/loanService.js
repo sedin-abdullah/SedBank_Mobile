@@ -199,10 +199,16 @@ export async function disburse({ applicationId, bankId, actor, ip = '' }) {
     throw ApiError.conflict("The borrower's payout account has not been penny-drop verified.");
   }
 
+  /*
+   * Documents are optional, so their absence is not a gate: a borrower may
+   * apply without uploading anything and still be disbursed.
+   *
+   * What remains a gate is an upload left *unresolved*. If a document was
+   * submitted, someone must have looked at it — otherwise ops could disburse
+   * against a payslip that was, in fact, about to be rejected. So the rule is
+   * "nothing pending", not "something present".
+   */
   const documents = await Document.find({ application: application._id }).lean();
-  if (!documents.length) {
-    throw ApiError.conflict('No supporting documents have been uploaded for this application.');
-  }
   const unverified = documents.filter(
     (doc) => doc.verificationStatus !== VERIFICATION_STATUS.VERIFIED
   );

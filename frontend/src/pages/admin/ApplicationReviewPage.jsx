@@ -254,9 +254,16 @@ export default function ApplicationReviewPage() {
     { label: 'Offer accepted by applicant', done: !!offer?.acceptedAt },
     { label: 'Loan agreement e-signed', done: !!application.agreement?.signedAt },
     { label: 'Payout account penny-drop verified', done: !!application.bankAccount?.verified },
+    /*
+     * "Nothing pending", not "something present" — the same rule the API
+     * enforces. Documents are optional, so a borrower who uploaded none is
+     * not blocked; an upload nobody has looked at still is.
+     */
     {
-      label: `All documents verified (${documents.length - pendingDocs.length}/${documents.length})`,
-      done: documents.length > 0 && pendingDocs.length === 0,
+      label: documents.length
+        ? `All documents verified (${documents.length - pendingDocs.length}/${documents.length})`
+        : 'No documents uploaded — optional',
+      done: pendingDocs.length === 0,
     },
   ];
   const checklistComplete = checklist.every((item) => item.done || item.blocking === false);
