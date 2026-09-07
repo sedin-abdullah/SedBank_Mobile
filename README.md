@@ -41,7 +41,7 @@ through end to end, which is the quickest way to see the whole product.
 ```bash
 npm run test:unit    # 46 Jest tests — EMI maths, underwriting rules
 npm run test:api     # 303 assertions over 98 requests (Newman)
-npm run test:e2e     # 87 Playwright tests across desktop, tablet and phone
+npm run test:e2e     # 93 Playwright tests across desktop, tablet and phone
 npm test             # all three
 npm run test:mobile  # 37 Appium tests on the Android app (needs an emulator)
 ```

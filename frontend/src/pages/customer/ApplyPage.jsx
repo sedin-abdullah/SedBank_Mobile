@@ -117,9 +117,21 @@ export default function ApplyPage() {
       if (form.fullName.trim().length < 2) next.fullName = 'Enter your full name.';
       if (form.pincode && !/^\d{6}$/.test(form.pincode)) next.pincode = 'Enter a valid 6-digit pincode.';
       if (form.dob) {
-        const age = (Date.now() - new Date(form.dob).getTime()) / (365.25 * 24 * 3600 * 1000);
-        if (age < 18) next.dob = 'You must be at least 18 years old to apply.';
-        if (age > 100) next.dob = 'Enter a valid date of birth.';
+        /*
+         * The field is typed rather than picked, so it can hold a partial or
+         * impossible date. Check the shape first: an invalid Date yields NaN,
+         * and NaN fails both comparisons below, which would let "1995-0" or
+         * "1995-13-40" through as valid.
+         */
+        const parsed = /^\d{4}-\d{2}-\d{2}$/.test(form.dob) ? new Date(form.dob) : null;
+
+        if (!parsed || Number.isNaN(parsed.getTime())) {
+          next.dob = 'Enter the date as YYYY-MM-DD.';
+        } else {
+          const age = (Date.now() - parsed.getTime()) / (365.25 * 24 * 3600 * 1000);
+          if (age < 18) next.dob = 'You must be at least 18 years old to apply.';
+          if (age > 100) next.dob = 'Enter a valid date of birth.';
+        }
       }
     }
 

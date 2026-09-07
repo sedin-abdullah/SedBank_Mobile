@@ -69,38 +69,79 @@ function prefixGeometry(prefix) {
 }
 
 /**
- * Numeric fields are rendered as text, deliberately.
+ * Number and date fields are rendered as plain text, deliberately.
  *
- * `<input type="number">` is exposed to Android's accessibility tree as a
- * **spinbutton**: the node advertises `ACTION_SET_PROGRESS` and not
- * `ACTION_SET_TEXT`. Any native automation driving the app — Appium,
- * UiAutomator2, the Sedstart runner — then calls SET_PROGRESS and gets
- * `invalid element state`, so the field cannot be filled at all on a device.
- * It is also worse for people: a spinner nobody wants, and a value that
- * changes when the wheel scrolls over it.
+ * Both native types become OS widgets inside a WebView, and neither is an
+ * editable text node any more:
+ *
+ * - `type="number"` is exposed to Android's accessibility tree as a
+ *   **spinbutton** — the node advertises `ACTION_SET_PROGRESS`, not
+ *   `ACTION_SET_TEXT`, so a native runner gets `invalid element state` and the
+ *   field cannot be filled at all on a device.
+ * - `type="date"` opens the **OS date picker**, a calendar dialog with nothing
+ *   for automation to address.
  *
  * `type="text"` with `inputMode` keeps the phone's numeric keypad and stays a
- * plain EditText. Keystrokes are filtered here so callers still only ever see
- * digits, which is what `type="number"` was buying.
+ * plain EditText. Keystrokes are filtered and formatted here, so callers still
+ * see exactly what the native inputs gave them — digits, or an ISO date — and
+ * nothing downstream changes. It is also better for people: no spinner, no
+ * value changing under a scroll wheel, and a birth date can simply be typed
+ * rather than paged back through a calendar.
  */
-function numericProps({ type, inputMode, step, onChange }) {
-  if (type !== 'number') return { type, inputMode, onChange };
+function plainTextProps({ type, inputMode, step, placeholder, maxLength, onChange }) {
+  const passthrough = { type, inputMode, placeholder, maxLength, onChange };
 
-  const decimals = step !== undefined && String(step) !== '1';
+  if (type === 'number') {
+    const decimals = step !== undefined && String(step) !== '1';
 
-  return {
-    type: 'text',
-    inputMode: inputMode || (decimals ? 'decimal' : 'numeric'),
-    onChange: (event) => {
-      const cleaned = decimals
-        ? // One decimal point, digits either side.
-          event.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
-        : event.target.value.replace(/\D/g, '');
+    return {
+      ...passthrough,
+      type: 'text',
+      inputMode: inputMode || (decimals ? 'decimal' : 'numeric'),
+      onChange: (event) => {
+        const cleaned = decimals
+          ? // One decimal point, digits either side.
+            event.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
+          : event.target.value.replace(/\D/g, '');
 
-      if (cleaned !== event.target.value) event.target.value = cleaned;
-      onChange?.(event);
-    },
-  };
+        if (cleaned !== event.target.value) event.target.value = cleaned;
+        onChange?.(event);
+      },
+    };
+  }
+
+  /*
+   * `<input type="date">` opens the OS date picker — a calendar dialog in a
+   * WebView, so the field is not an editable node at all and automation has to
+   * drive a spinner it cannot address. A plain field that accepts a typed date
+   * is both scriptable and quicker for anyone entering a birth date, which is
+   * never "near today" and so is the worst case for a picker.
+   *
+   * The value stays ISO `YYYY-MM-DD`, unchanged, so callers and the API see
+   * exactly what the native input gave them. Separators are inserted while
+   * typing, and a pasted or scripted `1995-06-15` — or `19950615` — both land
+   * correctly.
+   */
+  if (type === 'date') {
+    return {
+      ...passthrough,
+      type: 'text',
+      inputMode: inputMode || 'numeric',
+      placeholder: placeholder || 'YYYY-MM-DD',
+      maxLength: maxLength ?? 10,
+      onChange: (event) => {
+        const digits = event.target.value.replace(/\D/g, '').slice(0, 8);
+        const cleaned = [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6, 8)]
+          .filter(Boolean)
+          .join('-');
+
+        if (cleaned !== event.target.value) event.target.value = cleaned;
+        onChange?.(event);
+      },
+    };
+  }
+
+  return passthrough;
 }
 
 export const Input = forwardRef(function Input(
@@ -116,6 +157,8 @@ export const Input = forwardRef(function Input(
     style,
     type = 'text',
     inputMode,
+    placeholder,
+    maxLength,
     // Browser-side constraints on a number input; meaningless on a text one,
     // and invalid HTML if forwarded. Validation lives in the form and the API.
     min,
@@ -129,7 +172,7 @@ export const Input = forwardRef(function Input(
   const generatedId = useId();
   const id = name || generatedId;
   const { padding, divided } = prefixGeometry(prefix);
-  const numeric = numericProps({ type, inputMode, step, onChange });
+  const plain = plainTextProps({ type, inputMode, step, placeholder, maxLength, onChange });
   void min;
   void max;
 
@@ -156,9 +199,11 @@ export const Input = forwardRef(function Input(
           aria-describedby={error ? fieldErrorId(id) : undefined}
           className={controlClasses(error, 'h-10')}
           style={padding ? { paddingLeft: padding, ...style } : style}
-          type={numeric.type}
-          inputMode={numeric.inputMode}
-          onChange={numeric.onChange}
+          type={plain.type}
+          inputMode={plain.inputMode}
+          placeholder={plain.placeholder}
+          maxLength={plain.maxLength}
+          onChange={plain.onChange}
           {...props}
         />
       </div>
