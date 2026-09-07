@@ -27,11 +27,11 @@ const ALL_STAFF = [ROLES.ADMIN, ROLES.CREDIT_OFFICER, ROLES.OPS_OFFICER, ROLES.C
 
 export const CUSTOMER_NAV = [
   { key: 'dashboard', label: 'Dashboard', to: '/app', icon: LayoutDashboard, end: true },
-  { key: 'apply-loan', label: 'Apply for a loan', to: '/app/apply', icon: FilePlus2 },
-  { key: 'applications', label: 'My applications', to: '/app/applications', icon: FileText },
-  { key: 'loans', label: 'My loans', to: '/app/loans', icon: Wallet },
+  { key: 'apply-loan', label: 'Apply for a loan', tabLabel: 'Apply', to: '/app/apply', icon: FilePlus2 },
+  { key: 'applications', label: 'My applications', tabLabel: 'Applications', to: '/app/applications', icon: FileText },
+  { key: 'loans', label: 'My loans', tabLabel: 'Loans', to: '/app/loans', icon: Wallet },
   { key: 'payments', label: 'Payments', to: '/app/payments', icon: Receipt },
-  { key: 'eligibility', label: 'Eligibility calculator', to: '/app/eligibility', icon: Calculator },
+  { key: 'eligibility', label: 'Eligibility calculator', tabLabel: 'Eligibility', to: '/app/eligibility', icon: Calculator },
   { key: 'profile', label: 'Profile', to: '/app/profile', icon: UserCircle },
 ];
 
@@ -55,6 +55,7 @@ export const ADMIN_NAV = [
   {
     key: 'documents',
     label: 'Document queue',
+    tabLabel: 'Documents',
     to: '/admin/documents',
     icon: FileCheck2,
     roles: [ROLES.ADMIN, ROLES.OPS_OFFICER, ROLES.CREDIT_OFFICER],
@@ -63,6 +64,7 @@ export const ADMIN_NAV = [
   {
     key: 'loans',
     label: 'Loan accounts',
+    tabLabel: 'Loans',
     to: '/admin/loans',
     icon: Wallet,
     roles: [ROLES.ADMIN, ROLES.OPS_OFFICER, ROLES.COLLECTIONS_OFFICER],
@@ -79,6 +81,7 @@ export const ADMIN_NAV = [
   {
     key: 'users',
     label: 'Users & roles',
+    tabLabel: 'Users',
     to: '/admin/users',
     icon: Users,
     roles: [ROLES.ADMIN],
@@ -87,6 +90,7 @@ export const ADMIN_NAV = [
   {
     key: 'banks',
     label: 'Partner banks',
+    tabLabel: 'Banks',
     to: '/admin/banks',
     icon: Landmark,
     roles: [ROLES.ADMIN],
@@ -95,6 +99,7 @@ export const ADMIN_NAV = [
   {
     key: 'settings',
     label: 'Product & rules',
+    tabLabel: 'Rules',
     to: '/admin/settings',
     icon: Settings,
     roles: [ROLES.ADMIN],
@@ -103,6 +108,7 @@ export const ADMIN_NAV = [
   {
     key: 'audit',
     label: 'Audit trail',
+    tabLabel: 'Audit',
     to: '/admin/audit',
     icon: ScrollText,
     roles: [ROLES.ADMIN],

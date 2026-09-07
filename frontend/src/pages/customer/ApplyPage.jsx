@@ -467,7 +467,7 @@ export default function ApplyPage() {
             ) : null}
           </CardBody>
 
-          <CardFooter className="justify-between">
+          <CardFooter className="action-bar justify-between">
             <Button
               variant="secondary"
               icon={ArrowLeft}

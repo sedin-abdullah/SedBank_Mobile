@@ -145,7 +145,12 @@ function TabBar({ items, role, onMore }) {
           }
         >
           <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <span className="max-w-full truncate">{item.label.split(' ')[0]}</span>
+          {/*
+            `tabLabel`, not the first word of `label`: "My applications" and
+            "My loans" both reduced to "My", giving two tabs a person could
+            not tell apart — and nothing for automation to address either.
+          */}
+          <span className="max-w-full truncate">{item.tabLabel || item.label}</span>
         </NavLink>
       ))}
 

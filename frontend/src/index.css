@@ -394,6 +394,34 @@
    * Bottom tab bar. Sits above the home indicator, and lifts out of the way
    * when the keyboard is up so it never floats mid-screen over a form.
    */
+  /**
+   * A form's primary action, kept clear of the bottom tab bar.
+   *
+   * The bar is `fixed`, so it covers whatever is under it at the current
+   * scroll position; padding at the end of the page only helps at maximum
+   * scroll. On a phone that left "Continue" underneath the bar whenever the
+   * keyboard shrank the viewport — the button measured y2748 against the
+   * bar's y2718 — so a tap aimed at Continue went to the fourth tab and the
+   * loan flow jumped to Payments.
+   *
+   * Sticking the row above the bar removes the overlap by construction,
+   * rather than relying on a keyboard event firing to hide the bar. Static
+   * again from `lg`, where there is no tab bar at all.
+   */
+  .action-bar {
+    position: sticky;
+    bottom: calc(var(--tabbar-height) + var(--safe-bottom));
+    z-index: 10;
+    background-color: theme('colors.canvas.raised');
+  }
+
+  @media (min-width: 1024px) {
+    .action-bar {
+      position: static;
+      background-color: transparent;
+    }
+  }
+
   .tabbar {
     padding-bottom: var(--safe-bottom);
     background: rgba(24, 11, 16, 0.92);
@@ -401,17 +429,31 @@
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
   }
+  /**
+   * No bottom navigation while typing: it is not needed mid-form, and at the
+   * bottom of a keyboard-shrunk viewport it lands directly over the field and
+   * its actions.
+   */
   html.keyboard-open .tabbar {
     display: none;
   }
 
   /**
-   * Scroll padding so a focused field is never left under the keyboard.
-   * Paired with the scrollIntoView in the keyboard listener.
+   * The structural half of the same fix — see .action-bar.
+   *
+   * It used to be hidden, which created a trap: the bottom band of the screen
+   * changed meaning between the moment a tap was aimed and the moment it
+   * landed. Typing an amount and then reaching for "Continue" — which sits at
+   * 61-87% across, exactly over the fourth tab — dismissed the keyboard,
+   * reflowed the layout, brought the bar back under the finger and navigated
+   * to Payments instead. Automation hit it every time; a person hits it
+   * whenever they tap quickly after typing.
+   *
+   * With `resize: native` the WebView is already sized above the keyboard, so
+   * the bar sits just above it and nothing needs hiding. Body padding is not
+   * needed for the same reason — the window itself is shorter — and adding it
+   * only produced a large empty scroll area under short forms.
    */
-  html.keyboard-open body {
-    padding-bottom: var(--keyboard-height);
-  }
 }
 
 @layer utilities {
