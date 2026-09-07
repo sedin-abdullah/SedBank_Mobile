@@ -25,6 +25,7 @@ import {
   Ban,
   ExternalLink,
   Camera as CameraIcon,
+  SkipForward,
 } from 'lucide-react';
 import { TESTIDS, rowId } from '@shared/testIds.js';
 import { PageHeader } from '../../components/layout/AppShell.jsx';
@@ -68,6 +69,7 @@ const SCORE_TONE = (score) => {
 function deriveActiveStep({
   application,
   documents,
+  documentsSkipped,
   status,
   bureau,
   isRejected,
@@ -79,7 +81,14 @@ function deriveActiveStep({
   if (isDisbursed) return 'disbursed';
 
   if (application.kyc?.status !== 'verified') return 'kyc';
-  if (documents.length === 0) return 'documents';
+  /*
+   * Documents are optional. Without an upload the borrower still lands here
+   * first, because it is the natural next step and most people do have a
+   * payslip to hand — but choosing "continue without documents" moves them
+   * on rather than pinning them, and the panel stays available afterwards so
+   * they can still upload later.
+   */
+  if (documents.length === 0 && !documentsSkipped) return 'documents';
 
   if (status === APPLICATION_STATUS.SENT_BACK) return 'sent_back';
   if (status === APPLICATION_STATUS.IN_REVIEW) return 'in_review';
@@ -185,6 +194,29 @@ export default function ApplicationDetailPage() {
   const fileInputRef = useRef(null);
   const [docType, setDocType] = useState('income_proof');
   const [file, setFile] = useState(null);
+
+  /*
+   * Remembered per application, and locally: the API has no field for "the
+   * borrower chose not to upload", so a component-state flag would pin them
+   * again on the next refresh.
+   */
+  const documentsSkipKey = `sedbank.documentsSkipped.${id}`;
+  const [documentsSkipped, setDocumentsSkipped] = useState(() => {
+    try {
+      return localStorage.getItem(documentsSkipKey) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const skipDocuments = () => {
+    try {
+      localStorage.setItem(documentsSkipKey, 'true');
+    } catch {
+      /* a private window still gets the choice for this session */
+    }
+    setDocumentsSkipped(true);
+  };
 
   const uploadDocument = useMutation({
     mutationFn: () => {
@@ -315,6 +347,7 @@ export default function ApplicationDetailPage() {
   const activeStep = deriveActiveStep({
     application,
     documents,
+    documentsSkipped,
     status,
     bureau,
     isRejected,
@@ -499,15 +532,33 @@ export default function ApplicationDetailPage() {
                     </div>
                   </div>
 
-                  <Button
-                    icon={Upload}
-                    disabled={!file}
-                    loading={uploadDocument.isPending}
-                    onClick={() => uploadDocument.mutate()}
-                    data-testid={TESTIDS.applicationDetail.documentUpload}
-                  >
-                    Upload
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      icon={Upload}
+                      disabled={!file}
+                      loading={uploadDocument.isPending}
+                      onClick={() => uploadDocument.mutate()}
+                      data-testid={TESTIDS.applicationDetail.documentUpload}
+                    >
+                      Upload
+                    </Button>
+
+                    {/*
+                      Not offered on `sent_back`: there the credit team has
+                      asked for something specific, so skipping it would send
+                      the application straight back into the same queue.
+                    */}
+                    {activeStep === 'documents' && documents.length === 0 && !documentsSkipped ? (
+                      <Button
+                        variant="secondary"
+                        icon={SkipForward}
+                        onClick={skipDocuments}
+                        data-testid={TESTIDS.applicationDetail.documentsSkip}
+                      >
+                        Continue without documents
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
 
                 {documents.length === 0 ? (
@@ -515,7 +566,11 @@ export default function ApplicationDetailPage() {
                     compact
                     icon={FileText}
                     title="No documents uploaded yet"
-                    message="Add at least one document to continue."
+                    message={
+                      documentsSkipped
+                        ? 'You chose to continue without documents. You can still add them here at any time.'
+                        : 'Documents are optional — add one, or continue without them.'
+                    }
                   />
                 ) : (
                   <div className="table-scroll">
@@ -615,7 +670,7 @@ export default function ApplicationDetailPage() {
                   <Button
                     icon={Gauge}
                     loading={pullBureau.isPending}
-                    disabled={documents.length === 0}
+                    disabled={documents.length === 0 && !documentsSkipped}
                     onClick={() => pullBureau.mutate()}
                     data-testid={TESTIDS.applicationDetail.bureauRun}
                   >
@@ -623,9 +678,9 @@ export default function ApplicationDetailPage() {
                   </Button>
                 </div>
 
-                {documents.length === 0 ? (
+                {documents.length === 0 && !documentsSkipped ? (
                   <p className="text-xs text-warning-700">
-                    Upload at least one document before running the credit check.
+                    Upload at least one document, or choose to continue without them.
                   </p>
                 ) : null}
               </CardBody>

@@ -219,6 +219,7 @@ export const TESTIDS = {
     documentFileInput: 'customer-application-document-file-input',
     documentCapture: 'customer-application-document-capture-btn',
     documentUpload: 'customer-application-document-upload-btn',
+    documentsSkip: 'customer-application-documents-skip-btn',
     documentsTable: 'customer-application-documents-table',
     documentRow: 'customer-application-documents', // + -row-{id}
 
