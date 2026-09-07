@@ -18,3 +18,11 @@ playwright/.cache/
 # Generated QA artefacts. The Newman report embeds live JWTs and demo
 # credentials from the run, and is ~3MB — never commit it.
 qa/reports/
+
+# Android signing material. The keystore IS the app's identity — losing it means
+# no future update can be installed over an existing one, and leaking it lets
+# anyone sign an APK as SedBank. Keep both out of the repo, back the keystore up
+# somewhere durable, and give CI the base64 of it as a secret.
+keystore.properties
+*.keystore
+*.jks

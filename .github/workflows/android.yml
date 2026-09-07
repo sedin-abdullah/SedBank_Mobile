@@ -1,0 +1,145 @@
+# Builds the Android APK in the cloud, so shipping one needs no local Android
+# SDK — the same convenience EAS Build gives an Expo project.
+#
+#   Run it by hand:  Actions -> "Android APK" -> Run workflow
+#   Publish a release: push a tag like v1.0.1-android
+#
+# Every run attaches the APK to the run itself; a tagged run also creates the
+# GitHub Release and uploads the APK there.
+name: Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'API the app is built against (must be absolute and reachable from a phone)'
+        required: false
+        default: 'https://sedbank-api.onrender.com'
+  push:
+    tags:
+      - 'v*-android'
+
+permissions:
+  contents: write # needed to create the Release on a tag
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # AGP 8.2 targets JDK 17; the runner defaults to a newer one.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Resolve the API URL
+        id: api
+        run: |
+          URL="${{ inputs.api_url }}"
+          if [ -z "$URL" ]; then URL="${{ vars.VITE_API_URL }}"; fi
+          if [ -z "$URL" ]; then URL="https://sedbank-api.onrender.com"; fi
+          # A loopback URL inside a WebView means the phone, not a server.
+          case "$URL" in
+            *localhost*|*127.0.0.1*)
+              echo "::error::VITE_API_URL is $URL, which resolves to the device inside a WebView. Set an absolute, reachable URL."
+              exit 1
+              ;;
+          esac
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Building against $URL"
+
+      - name: Build the web bundle
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ steps.api.outputs.url }}
+        run: npm run build
+
+      - name: Sync Capacitor
+        working-directory: frontend
+        run: npx cap sync android
+
+      # Present only when the repo has the signing secrets; without them the job
+      # still produces an installable debug APK rather than failing.
+      - name: Write the signing config
+        id: signing
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "No keystore secret — building the debug APK."
+            echo "variant=debug" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > frontend/android/release.keystore
+          cat > frontend/android/keystore.properties <<EOF
+          storeFile=release.keystore
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+          echo "variant=release" >> "$GITHUB_OUTPUT"
+
+      - name: Assemble
+        working-directory: frontend/android
+        run: |
+          if [ "${{ steps.signing.outputs.variant }}" = "release" ]; then
+            ./gradlew assembleRelease --no-daemon
+          else
+            ./gradlew assembleDebug --no-daemon
+          fi
+
+      - name: Name the artefact
+        id: apk
+        run: |
+          VARIANT="${{ steps.signing.outputs.variant }}"
+          SRC=$(find frontend/android/app/build/outputs/apk/$VARIANT -name '*.apk' | head -1)
+          VERSION=$(grep -m1 versionName frontend/android/app/build.gradle | sed 's/.*"\(.*\)".*/\1/')
+          # A tag names the version it ships; otherwise fall back to build.gradle.
+          case "${{ github.ref }}" in
+            refs/tags/v*-android) VERSION="${GITHUB_REF_NAME#v}"; VERSION="${VERSION%-android}" ;;
+          esac
+          SUFFIX=""
+          [ "$VARIANT" = "debug" ] && SUFFIX="-debug"
+          NAME="SedBank-v$VERSION$SUFFIX.apk"
+          cp "$SRC" "$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Built $NAME ($(du -h "$NAME" | cut -f1), $VARIANT)"
+
+      - name: Remove the signing material
+        if: always()
+        run: rm -f frontend/android/release.keystore frontend/android/keystore.properties
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sedbank-android
+          path: ${{ steps.apk.outputs.name }}
+          if-no-files-found: error
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${{ steps.apk.outputs.name }}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${{ steps.apk.outputs.name }}" \
+              --title "SedBank Android ${GITHUB_REF_NAME}" \
+              --notes "Built from ${GITHUB_SHA:0:7} against ${{ steps.api.outputs.url }}. Install: open the APK on the phone and allow the install when Android asks. See docs/BUILD_APK.md."
+          fi
