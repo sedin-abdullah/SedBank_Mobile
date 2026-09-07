@@ -50,9 +50,12 @@ services:
       - key: EXPOSE_OTP
         value: 'true'
 
-      # Loan back-dating and data reset. Must stay false outside testing.
+      # Loan back-dating, data reset, and `simulate` on the bureau pull, which
+      # lets a test choose the score band instead of drawing a random one.
+      # On for this demo deployment so the API suite has a deterministic
+      # happy path; it would not be on for real money.
       - key: ENABLE_TEST_HOOKS
-        value: 'false'
+        value: 'true'
 
       - key: DELINQUENCY_SWEEP_MINUTES
         value: '15'
