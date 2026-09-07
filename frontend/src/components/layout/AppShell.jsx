@@ -23,6 +23,7 @@ import {
   Wifi,
   WifiOff,
   MoreHorizontal,
+  ChevronLeft,
 } from 'lucide-react';
 import { TESTIDS, navId, tabId } from '@shared/testIds.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -30,6 +31,7 @@ import { useSocket } from '../../context/SocketContext.jsx';
 import { ROLE_LABELS, ROLES } from '../../lib/constants.js';
 import { initials } from '../../lib/format.js';
 import { cn } from '../../lib/utils.js';
+import { pushBackHandler } from '../../lib/backHandler.js';
 import { navForRole, groupNav, tabsForRole } from './navigation.js';
 import NotificationBell from './NotificationBell.jsx';
 
@@ -179,8 +181,25 @@ export default function AppShell({ portal }) {
   const items = navForRole(user?.role);
   const profilePath = portal === 'admin' ? '/admin/profile' : '/app/profile';
 
+  /*
+   * A nav destination is a root; anything else was reached from one and needs
+   * a way back. Comparing against the nav rather than counting path segments
+   * keeps this correct as routes are added.
+   */
+  const isSubPage = !items.some((item) => item.to === location.pathname);
+
   // Close the mobile drawer whenever the route changes.
   useEffect(() => setDrawerOpen(false), [location.pathname]);
+
+  /*
+   * Android's back gesture should close the drawer, not leave the app. The
+   * handler is only registered while it is open, so back falls through to
+   * history the rest of the time.
+   */
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    return pushBackHandler(() => setDrawerOpen(false));
+  }, [drawerOpen]);
 
   // Lock body scroll while the drawer is open.
   useEffect(() => {
@@ -323,6 +342,24 @@ export default function AppShell({ portal }) {
           >
             <Menu className="h-5 w-5" />
           </button>
+
+          {/*
+            * A phone has no persistent sidebar to orient you, so sub-pages
+            * need a way back that does not depend on knowing the hardware
+            * gesture. Shown only where there is somewhere to go: the tab
+            * destinations are roots.
+            */}
+          {isSubPage ? (
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              data-testid={TESTIDS.shell.back}
+              aria-label="Go back"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-white/10 lg:hidden"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          ) : null}
 
           <div className="lg:hidden">
             <span className="text-sm font-semibold text-slate-900">SedBank</span>

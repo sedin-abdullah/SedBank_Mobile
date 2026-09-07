@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "assets:source": "node scripts/generate-app-art.mjs",
+    "assets": "capacitor-assets generate --android"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.2",
@@ -35,6 +37,7 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.2.2",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",

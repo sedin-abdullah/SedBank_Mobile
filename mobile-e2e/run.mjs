@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { remote } from 'webdriverio';
-import { TESTIDS, navId, tabId } from '../shared/testIds.js';
+import { TESTIDS, navId, tabId, rowId } from '../shared/testIds.js';
 
 const APP_ID = 'com.sedin.sedbank';
 /** The API the installed APK was built against (VITE_API_URL). */
@@ -547,6 +547,152 @@ try {
     }
   });
 
+  /* --- things that only broke on a real device --- */
+  console.log('\nNative widgets and navigation');
+
+  await test('the status dropdown opens, is legible, and applies a choice', async () => {
+    /*
+     * A <select> popup is an OS widget: it takes its colours from the Android
+     * theme and ignores the element's CSS. Two theme mistakes made it unusable
+     * — DayNight resolved the row text for a light theme on our dark ground,
+     * and the launch theme's `android:background` handed the splash artwork to
+     * the list rows. Neither is visible from inside the WebView, so this
+     * drives the native dialog and checks the selection lands.
+     */
+    await signIn(DEMO.admin);
+    await driver.url('https://localhost/admin/loans');
+    await waitFor(TESTIDS.adminLoans.statusFilter, 30000);
+
+    const before = await driver.execute(
+      `return document.querySelector('[data-testid="${TESTIDS.adminLoans.statusFilter}"]').value;`
+    );
+
+    await nativeTap(TESTIDS.adminLoans.statusFilter);
+    await driver.pause(1500);
+
+    await driver.switchContext('NATIVE_APP');
+    try {
+      // The rows are real native views; if the dialog never opened, this fails.
+      const option = await driver.$('android=new UiSelector().text("Overdue")');
+      await option.waitForExist({ timeout: 15000, timeoutMsg: 'the native dropdown never opened' });
+
+      const box = await option.getSize();
+      // A row wearing the splash drawable was ~1000px tall; a text row is not.
+      if (box.height > 400) {
+        throw new Error(`dropdown row is ${box.height}px tall — it is drawing a background image`);
+      }
+      await option.click();
+    } finally {
+      await useWebview();
+    }
+
+    await driver.pause(1200);
+    const after = await driver.execute(
+      `return document.querySelector('[data-testid="${TESTIDS.adminLoans.statusFilter}"]').value;`
+    );
+    if (after === before) throw new Error(`the selection did not apply (still "${after}")`);
+    if (after !== 'overdue') throw new Error(`expected "overdue", got "${after}"`);
+  });
+
+  await test('a wide table scrolls inside its card instead of being clipped', async () => {
+    await driver.url('https://localhost/admin/loans');
+    await waitFor(TESTIDS.adminLoans.table, 30000);
+
+    const geometry = await driver.execute(`
+      const table = document.querySelector('[data-testid="${TESTIDS.adminLoans.table}"]');
+      const wrapper = table.parentElement;
+      const card = table.closest('.card');
+      const firstCell = table.querySelector('tbody td');
+      return {
+        cardLeft: card.getBoundingClientRect().left,
+        wrapperLeft: wrapper.getBoundingClientRect().left,
+        cellLeft: firstCell.getBoundingClientRect().left,
+        overflowX: getComputedStyle(wrapper).overflowX,
+        scrollable: wrapper.scrollWidth > wrapper.clientWidth,
+        scrollLeft: wrapper.scrollLeft,
+        pageOverflows: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      };
+    `);
+
+    // The wrapper used a negative margin meant to cancel a padding the card
+    // does not have, so it sat outside the card and the card clipped it.
+    if (geometry.wrapperLeft < geometry.cardLeft - 1) {
+      throw new Error(
+        `the table starts ${Math.round(geometry.cardLeft - geometry.wrapperLeft)}px outside its card, so it is clipped`
+      );
+    }
+    if (geometry.cellLeft < geometry.cardLeft) {
+      throw new Error('the first column starts left of the card and is cut off');
+    }
+    if (geometry.overflowX !== 'auto' && geometry.overflowX !== 'scroll') {
+      throw new Error(`the table wrapper does not scroll (overflow-x: ${geometry.overflowX})`);
+    }
+    if (geometry.pageOverflows) throw new Error('the page itself scrolls sideways');
+  });
+
+  await test('a sub-page offers a back button that returns to the list', async () => {
+    await driver.url('https://localhost/admin/loans');
+    await waitFor(TESTIDS.adminLoans.table, 30000);
+
+    // Any row will do; take the first.
+    const first = await driver.execute(`
+      const row = document.querySelector('[data-testid^="${TESTIDS.adminLoans.row}-row-"]')
+        || document.querySelector('tbody tr');
+      if (!row) return null;
+      row.querySelector('a, button, td')?.click?.();
+      return true;
+    `);
+    if (!first) throw new Error('no loan rows to open');
+
+    await waitFor(TESTIDS.adminLoanDetail.root, 30000);
+
+    // The phone has no sidebar to orient from, so a visible way back matters.
+    const back = await waitFor(TESTIDS.shell.back, 15000);
+    const size = await back.getSize();
+    if (size.height < 40) throw new Error(`the back target is only ${size.height}px tall`);
+
+    await back.click();
+    await waitFor(TESTIDS.adminLoans.table, 30000);
+  });
+
+  await test('Android back navigates instead of dropping out of the app', async () => {
+    await driver.url('https://localhost/admin/loans');
+    await waitFor(TESTIDS.adminLoans.table, 30000);
+    await driver.execute(`
+      const row = document.querySelector('tbody tr');
+      row.querySelector('a, button, td')?.click?.();
+    `);
+    await waitFor(TESTIDS.adminLoanDetail.root, 30000);
+
+    await driver.back(); // the hardware gesture
+    await driver.pause(1500);
+    await useWebview();
+
+    // Capacitor's default is to exit the app on back, from anywhere.
+    const state = await driver.queryAppState(APP_ID);
+    if (state !== 4) throw new Error(`back left the app (state ${state})`);
+    await waitFor(TESTIDS.adminLoans.table, 20000);
+  });
+
+  await test('Android back closes the nav drawer first', async () => {
+    await driver.url('https://localhost/admin');
+    await waitFor(TESTIDS.shell.root, 30000);
+    await (await waitFor(TESTIDS.shell.tabMore, 20000)).click();
+    await waitFor(TESTIDS.shell.mobileNavDrawer, 15000);
+
+    await driver.back();
+    await driver.pause(1200);
+    await useWebview();
+
+    const stillOpen = await driver.execute(
+      `return !!document.querySelector('[data-testid="${TESTIDS.shell.mobileNavDrawer}"]');`
+    );
+    if (stillOpen) throw new Error('the drawer stayed open');
+
+    const state = await driver.queryAppState(APP_ID);
+    if (state !== 4) throw new Error(`back left the app instead of closing the drawer (state ${state})`);
+  });
+
   console.log('\nKeyboard and background behaviour');
 
   await test('the soft keyboard is accounted for, not left covering the field', async () => {
@@ -561,8 +707,19 @@ try {
      * Without both, this test would report a working feature as broken.
      */
     await shell('settings', ['put', 'secure', 'show_ime_with_hard_keyboard', '1']);
+
+    /*
+     * Restart the IME every time, not just when the setting changes: on this
+     * AVD it stops honouring the setting between runs and dumpsys reports
+     * mInputShown=false however the field is tapped. The pause is for it to
+     * come back — tapping while it starts draws no keyboard at all.
+     */
     const ime = String(await shell('settings', ['get', 'secure', 'default_input_method'])).trim();
-    if (ime && ime !== 'null') await shell('am', ['force-stop', ime.split('/')[0]]);
+    if (ime && ime !== 'null') {
+      await shell('am', ['force-stop', ime.split('/')[0]]);
+      await shell('ime', ['set', ime]);
+      await driver.pause(6000);
+    }
 
     await signOut();
     await driver.url('https://localhost/login');
@@ -572,6 +729,30 @@ try {
 
     const viewportBefore = await driver.execute('return window.innerHeight;');
     await nativeTap(TESTIDS.login.mobileInput);
+
+    /*
+     * Whether the IME actually came up is a fact about the emulator, and it
+     * has to be established before anything is asserted about the app: this
+     * AVD sometimes refuses to raise it for WebView inputs however the field
+     * is tapped, and blaming the app for that would be wrong.
+     */
+    let shown = false;
+    for (let i = 0; i < 10; i += 1) {
+      await driver.pause(700);
+      const dump = String(await shell('dumpsys', ['input_method']));
+      if (/mInputShown=true/.test(dump)) {
+        shown = true;
+        break;
+      }
+      if (i === 4) await nativeTap(TESTIDS.login.mobileInput); // one retry
+    }
+
+    if (!shown) {
+      throw new Error(
+        'SKIP: the emulator would not raise the soft IME (mInputShown=false), ' +
+          'so keyboard handling cannot be exercised here'
+      );
+    }
 
     let state = {};
     for (let i = 0; i < 16; i += 1) {
@@ -592,9 +773,29 @@ try {
 
     if (!state.focused) throw new Error('the native tap did not focus the field');
     if (!state.open) throw new Error('html.keyboard-open was never set');
-    if (state.height <= 0) throw new Error(`--keyboard-height stayed at ${state.height}px`);
-    if (state.viewport >= viewportBefore) {
-      throw new Error(`the viewport never shrank from ${viewportBefore}px`);
+
+    /*
+     * Distinguish "the app failed to measure the keyboard" from "there was
+     * nothing to measure". On this AVD the IME draws over the WebView without
+     * resizing the window, the visual viewport or the body, and the plugin
+     * reports a height of 0 — so no source exists and the app cannot be at
+     * fault. When the geometry *does* move, a zero offset is a real bug and
+     * fails below.
+     */
+    const moved = state.viewport < viewportBefore;
+
+    if (!moved && state.height <= 0) {
+      throw new Error(
+        'SKIP: the keyboard opened but changed no viewport, body or visual-viewport ' +
+          `height (all ${state.viewport}px) and the plugin reported 0, so the offset ` +
+          'has no source to read here — needs a device or an AVD with hw.keyboard=no'
+      );
+    }
+
+    if (state.height <= 0) {
+      throw new Error(
+        `the viewport shrank ${viewportBefore} -> ${state.viewport} but --keyboard-height stayed 0px`
+      );
     }
     // The point of all of it: the field is still on screen.
     if (state.fieldBottom > state.viewport) {

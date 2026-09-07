@@ -16,6 +16,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { NativeBiometric } from 'capacitor-native-biometric';
 
 import { IS_NATIVE } from './api.js';
+import { runBackHandler } from './backHandler.js';
 
 export { IS_NATIVE };
 
@@ -99,23 +100,60 @@ function publishKeyboardHeight(px) {
   document.documentElement.style.setProperty('--keyboard-height', `${value}px`);
 }
 
+/** The viewport and body heights with no keyboard up, to measure against. */
+let restingViewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+let restingBodyHeight =
+  typeof document !== 'undefined' && document.body ? document.body.clientHeight : 0;
+
 /**
  * `keyboardWillShow` reports a height of 0 on Android under `resize: body` —
- * the plugin shrinks the WebView instead of handing us a number. So take the
- * height from whichever source actually knows it: the event when it is
- * populated, otherwise the gap the visual viewport leaves behind.
+ * the plugin resizes rather than handing us a number. So take the height from
+ * whichever source actually knows it: the event when it is populated, then the
+ * gap the visual viewport leaves, then the drop in the window's own height.
  */
 function keyboardHeightFrom(info) {
   if (info?.keyboardHeight > 0) return info.keyboardHeight;
 
+  // The keyboard overlaying the page, without the window resizing.
   const viewport = window.visualViewport;
-  if (viewport) return Math.max(0, window.innerHeight - viewport.height);
+  if (viewport && window.innerHeight - viewport.height > 0) {
+    return window.innerHeight - viewport.height;
+  }
 
-  return 0;
+  // The window resized instead, which is what adjustResize does: the height
+  // is then the drop from the tallest viewport seen with no keyboard up.
+  const fromWindow = restingViewportHeight - window.innerHeight;
+  if (fromWindow > 0) return fromWindow;
+
+  // Last: the plugin's `resize: body` mode leaves window.innerHeight alone and
+  // shrinks the body instead, so nothing above notices.
+  const body = document.body;
+  return Math.max(0, restingBodyHeight - (body ? body.clientHeight : 0));
 }
 
 function wireKeyboard() {
   if (!IS_NATIVE) return;
+
+  // Track the no-keyboard height, so a resize can be measured against it.
+  window.addEventListener('resize', () => {
+    if (!document.documentElement.classList.contains('keyboard-open')) {
+      restingViewportHeight = Math.max(restingViewportHeight, window.innerHeight);
+      restingBodyHeight = Math.max(restingBodyHeight, document.body?.clientHeight || 0);
+    }
+  });
+
+  /*
+   * The plugin's show events fire before the WebView's viewport metrics have
+   * caught up, so a height measured at that instant is still the resting one.
+   * Recompute on every resize while the keyboard is up and the value
+   * converges on the truth instead of latching zero.
+   */
+  const republish = () => {
+    if (!document.documentElement.classList.contains('keyboard-open')) return;
+    publishKeyboardHeight(keyboardHeightFrom(null));
+  };
+  window.addEventListener('resize', republish);
+  window.visualViewport?.addEventListener('resize', republish);
 
   const onShow = (info) => {
     publishKeyboardHeight(keyboardHeightFrom(info));
@@ -139,6 +177,34 @@ function wireKeyboard() {
 
   Keyboard.addListener('keyboardWillHide', onHide);
   Keyboard.addListener('keyboardDidHide', onHide);
+}
+
+/* ------------------------------------------------------------------ *
+ * Hardware back
+ * ------------------------------------------------------------------ */
+
+/**
+ * Android's back gesture, wired to the app rather than to the process.
+ *
+ * Capacitor's default is to exit the app on back, from anywhere — so a
+ * borrower three screens into an application, or with the nav drawer open,
+ * would lose the app instead of going back one step. Overlays get first
+ * refusal (see backHandler.js), then history, and only at the root does back
+ * actually leave.
+ */
+function wireBackButton() {
+  if (!IS_NATIVE) return;
+
+  App.addListener('backButton', ({ canGoBack }) => {
+    if (runBackHandler()) return;
+
+    if (canGoBack && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    App.exitApp();
+  });
 }
 
 /* ------------------------------------------------------------------ *
@@ -174,6 +240,7 @@ export async function initNative() {
   }
 
   wireKeyboard();
+  wireBackButton();
   await applyPerformanceProfile();
 
   App.addListener('appStateChange', ({ isActive }) => setPaused(!isActive));

@@ -283,8 +283,19 @@
    * ------------------------------------------------------------------- */
 
   /* Horizontal scroll is contained per-table; the page body never scrolls sideways. */
+  /**
+   * Wide tables scroll inside their own container rather than pushing the page
+   * sideways.
+   *
+   * No negative margin: this used `-mx-5` to bleed past a `.card-body`'s
+   * padding, but every table here sits directly in a `.card`, which has none.
+   * On a phone that pulled the table 20px outside the card, where the card's
+   * `overflow-hidden` sliced the first column mid-character — the table looked
+   * misaligned and the loan numbers were unreadable.
+   */
   .table-scroll {
-    @apply -mx-5 overflow-x-auto sm:mx-0;
+    @apply overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .data-table {

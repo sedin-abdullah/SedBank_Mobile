@@ -43,7 +43,13 @@ jobs:
 
       - name: Install
         working-directory: frontend
-        run: npm ci
+        run: |
+          npm ci
+          # The same lockfile gap that broke the Vercel build: the two Linux
+          # rollup binaries are listed with identical cpu/os and no libc
+          # discriminator, so npm installs neither and vite cannot start.
+          ROLLUP_VERSION=$(node -p "require('rollup/package.json').version")
+          npm install --no-save "@rollup/rollup-linux-x64-gnu@$ROLLUP_VERSION"
 
       - name: Resolve the API URL
         id: api

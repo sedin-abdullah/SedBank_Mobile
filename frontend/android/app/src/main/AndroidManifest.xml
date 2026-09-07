@@ -9,12 +9,19 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!--
+            windowSoftInputMode=adjustResize: Capacitor's Keyboard plugin is
+            configured with resize: body, which expects the window to resize
+            when the keyboard opens. Left unset, the behaviour is Android's
+            heuristic and the published keyboard offset comes out as 0.
+        -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
             android:exported="true">
 
             <intent-filter>

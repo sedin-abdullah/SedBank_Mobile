@@ -7,7 +7,7 @@ holds by construction rather than by discipline.
 
 ## Download it
 
-[**sedbank-android-debug.apk**](https://github.com/sedin-abdullah/SedBank_Mobile/releases/download/v1.0.0-android/sedbank-android-debug.apk)
+[**SedBank-v1.0.0-debug.apk**](https://github.com/sedin-abdullah/SedBank_Mobile/releases/download/v1.0.0-android/SedBank-v1.0.0-debug.apk)
 — open it on the phone and allow the install when Android asks. Sign in with any
 account from [CREDENTIALS.md](CREDENTIALS.md).
 
@@ -86,12 +86,14 @@ are 56px.
 mobile-number and OTP fields sit low on the sign-in sheet and were the ones
 getting covered.
 
-The height is read from `keyboardDidShow` as well as `keyboardWillShow`, and
-falls back to the gap the visual viewport leaves. That is not belt-and-braces:
-under `resize: body` Android reports a height of `0` in `keyboardWillShow`, so
-reading only that event leaves `--keyboard-height` at `0px` and every offset
-that depends on it inert. Measured on the emulator, the viewport goes 845 → 533
-and the variable lands at 336px.
+The height is read from `keyboardDidShow` as well as `keyboardWillShow`, then
+from the gap the visual viewport leaves, then from the drop in the window's own
+height. That is not belt-and-braces: under `resize: body` Android reports a
+height of `0` in `keyboardWillShow`, so reading only that event leaves
+`--keyboard-height` at `0px` and every offset depending on it inert. Measured on
+the emulator, the viewport goes 845 → 533 and the variable lands at 336px. The
+activity also declares `windowSoftInputMode="adjustResize"`, since leaving it
+unset makes the resize Android's heuristic rather than a guarantee.
 
 **Blur is expensive.** `backdrop-filter` at 16–24px is the costliest thing this
 UI does, and on a mid-range Android WebView it is the difference between smooth
@@ -114,6 +116,43 @@ existing in principle.
 **Ambient motion stops off-screen.** The drifting glow animates forever, which
 is battery spent on pixels nobody is looking at. Capacitor's `appStateChange`
 toggles `html.app-paused`, which pauses the drift, pulse and lifecycle flow.
+
+**Back goes back.** Capacitor's default is to *exit the app* on the back
+gesture, from anywhere — with the drawer open, or three screens into an
+application. `frontend/src/lib/backHandler.js` holds a small stack of handlers:
+overlays (the drawer, any `Modal`) register while open and get first refusal,
+then history, and only at the root does back actually leave. Sub-pages also show
+a back chevron in the mobile top bar, because a phone has no sidebar to orient
+from and the gesture is not discoverable.
+
+**Wide tables scroll inside their card.** `.table-scroll` sets `overflow-x:auto`
+with no negative margin. It previously used `-mx-5` to bleed past a
+`.card-body`'s padding — but every table sits directly in a `.card`, which has
+none, so on a phone the table sat 20px outside its card and the card's
+`overflow-hidden` sliced the first column mid-character. Loan numbers read as
+`3B-LN-00011`.
+
+## Native widgets take their colours from the Android theme, not from CSS
+
+A `<select>` popup, and every permission or biometric prompt, is an **OS
+widget**. The page's CSS — including the `select option { }` rule that works in a
+desktop browser — is ignored. They read
+`frontend/android/app/src/main/res/values/styles.xml`, which is why two mistakes
+there made the status filter unusable while every web test stayed green:
+
+- The theme was `Theme.AppCompat.DayNight.*`. The app is dark in every scheme,
+  so on a device in light mode the dropdown resolved its row text to near-black
+  and drew it on our dark ground. It is now fixed dark.
+- The launch theme set `android:background` to the splash drawable. That
+  attribute is the default background for every **view** inheriting the theme,
+  not the window's — so the dropdown's list rows each drew the full splash
+  artwork and stood about a thousand pixels tall. The window attribute is
+  `android:windowBackground`.
+
+`AppTheme.NoActionBar` now points `alertDialogTheme` at `SedBankDialog`, which
+sets the raised wine surface, light text and the rose accent, so native dialogs
+match the app. If you add a native surface, colour it there — and check it on a
+device with the system in **light** mode, since that is the case that fails.
 
 ## Native capabilities
 
@@ -152,7 +191,7 @@ is worth knowing that no amount of JS defensiveness would have caught it.
 ## Tests
 
 ```bash
-npm run test:mobile      # 32 Appium tests on a running Android emulator
+npm run test:mobile      # 37 Appium tests on a running Android emulator
 ```
 
 Appium 3 with the UiAutomator2 driver, driving the app through the
@@ -179,11 +218,13 @@ or names each one:
   not started` — a failure that reads like an app crash and is not. The suite
   takes a PID lock and refuses to start rather than let that happen.
 - **`hw.keyboard=yes`** AVDs route typing to the host and never raise the
-  on-screen IME. The keyboard test sets `show_ime_with_hard_keyboard` and then
-  force-stops the IME, because the IME only reads that setting when it
-  restarts. It also taps through the native context: a chromedriver click
-  focuses a WebView input without raising the keyboard, which looks exactly
-  like a broken feature.
+  on-screen IME. The keyboard test sets `show_ime_with_hard_keyboard`, restarts
+  the IME (it only reads that setting on restart) and taps through the native
+  context, because a chromedriver click focuses a WebView input *without*
+  raising the keyboard — which looks exactly like a broken feature. It then
+  checks `dumpsys input_method` and **skips with a stated reason** if the IME
+  still did not appear, rather than reporting an emulator limitation as an app
+  fault. It fails, loudly, if the keyboard does appear and the offset is wrong.
 - **The emulator can lose DNS** after a host network change or sleep, and then
   every request fails as `Failed to fetch` with the app blameless. Confirm with
   `adb shell ping -c 2 sedbank-api.onrender.com`; if it says `unknown host`,
@@ -199,6 +240,10 @@ or names each one:
   that the blur goes and the panels keep a solid fill. What is *not* measured is
   frames per second while scrolling on an actual mid-range phone, which is the
   number the fallback exists to protect.
+- **The keyboard offset, on this emulator.** The behaviour was measured working
+  by hand (845 → 533, `--keyboard-height: 336px`), but the AVD stopped raising
+  the soft IME for WebView inputs, so the test skips rather than asserts. It
+  needs a device, or an AVD built with `hw.keyboard=no`.
 - **Push delivery**, pending a Firebase project and `google-services.json`.
 - **A biometric prompt**, which needs an enrolled fingerprint on the device.
   The keystore round-trip is written but unproven.

@@ -1,27 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Base application theme. -->
-    <!-- Dark parent: the app ground is wine-black, so a Light theme flashed
-         white between the splash and the WebView. -->
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.DarkActionBar">
-        <!-- Customize your theme here. -->
+    <!--
+        The app ground is wine-black in every scheme, so the theme is fixed dark
+        rather than DayNight. Following the system setting made native widgets
+        resolve their text colour for a light theme while sitting on our dark
+        ground — which is how the <select> dropdown ended up dark-on-dark.
+    -->
+    <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@color/canvas</item>
+
+        <!--
+            windowBackground, not android:background: the latter is the default
+            for every *view* that inherits it, which is not what a window
+            colour is, and it leaked into the dropdown's own surface.
+        -->
+        <item name="android:windowBackground">@color/canvas</item>
         <item name="android:statusBarColor">@color/canvas</item>
         <item name="android:navigationBarColor">@color/canvas</item>
         <item name="android:windowLightStatusBar">false</item>
+
+        <!--
+            A <select> popup is an OS widget, not page content: it takes its
+            colours from here and ignores the CSS on the element. Same for the
+            permission and biometric prompts.
+        -->
+        <item name="android:alertDialogTheme">@style/SedBankDialog</item>
+        <item name="alertDialogTheme">@style/SedBankDialog</item>
+        <item name="android:textColorPrimary">@color/ink</item>
+        <item name="android:textColorSecondary">@color/ink_muted</item>
+        <item name="colorAccent">@color/rose</item>
     </style>
 
+    <!-- Native dialogs: the raised wine surface, light text, brand accent. -->
+    <style name="SedBankDialog" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@color/canvas_raised</item>
+        <item name="android:colorBackground">@color/canvas_raised</item>
+        <item name="colorBackgroundFloating">@color/canvas_raised</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textColorPrimary">@color/ink</item>
+        <item name="android:textColorSecondary">@color/ink_muted</item>
+        <item name="android:textColorAlertDialogListItem">@color/ink</item>
+        <item name="colorAccent">@color/rose</item>
+    </style>
 
+    <!--
+        The launch theme, and the second half of the dropdown bug.
+
+        Capacitor's template sets `android:background` here. That is the
+        default background for every view inheriting the theme, not the
+        window's — so the splash artwork was handed to the native dropdown's
+        list rows, which is why each option rendered a giant app mark and was
+        a thousand pixels tall. windowBackground is the attribute that means
+        "behind this window", and postSplashScreenTheme hands over cleanly.
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/canvas</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

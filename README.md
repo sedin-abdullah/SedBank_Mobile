@@ -43,7 +43,7 @@ npm run test:unit    # 46 Jest tests — EMI maths, underwriting rules
 npm run test:api     # 303 assertions over 98 requests (Newman)
 npm run test:e2e     # 87 Playwright tests across desktop, tablet and phone
 npm test             # all three
-npm run test:mobile  # 32 Appium tests on the Android app (needs an emulator)
+npm run test:mobile  # 37 Appium tests on the Android app (needs an emulator)
 ```
 
 Both integration suites boot their own throwaway API, so nothing needs to be
@@ -59,7 +59,7 @@ rules enforced server-side.
 **An Android app from the same build.** Capacitor wraps the SPA, so every screen
 and role is present on a phone — with a bottom tab bar instead of a sidebar,
 camera KYC capture and biometric sign-in.
-[Download the APK](https://github.com/sedin-abdullah/SedBank_Mobile/releases/download/v1.0.0-android/sedbank-android-debug.apk),
+[Download the APK](https://github.com/sedin-abdullah/SedBank_Mobile/releases/download/v1.0.0-android/SedBank-v1.0.0-debug.apk),
 or see [docs/MOBILE.md](docs/MOBILE.md) to build it.
 
 **A real rule engine.** Bureau score, income floor and FOIR decide between

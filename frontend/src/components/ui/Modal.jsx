@@ -6,10 +6,12 @@
  * On small screens the panel docks to the bottom of the viewport so it stays
  * reachable one-handed; from `sm` up it is a centred dialog.
  */
+import { useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { TESTIDS } from '@shared/testIds.js';
 import { cn } from '../../lib/utils.js';
+import { pushBackHandler } from '../../lib/backHandler.js';
 import Button from './Button.jsx';
 
 const WIDTHS = {
@@ -30,6 +32,15 @@ export function Modal({
   testId,
   closeOnOverlay = true,
 }) {
+  /*
+   * Radix closes on Escape, but Android's back gesture is not Escape — without
+   * this, back would navigate away and leave the dialog's work unfinished.
+   */
+  useEffect(() => {
+    if (!open) return undefined;
+    return pushBackHandler(() => onOpenChange?.(false));
+  }, [open, onOpenChange]);
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>

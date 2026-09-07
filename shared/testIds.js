@@ -60,6 +60,7 @@ export const TESTIDS = {
     connectionStatus: 'app-realtime-status',
     tabBar: 'app-tab-bar',
     tabMore: 'app-tab-more-btn',
+    back: 'app-back-btn',
   },
 
   common: {

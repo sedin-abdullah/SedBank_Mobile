@@ -2,10 +2,12 @@
 <!-- Wine Reserve, mirroring frontend/tailwind.config.js. -->
 <resources>
     <color name="canvas">#180B10</color>
+    <color name="canvas_raised">#1F0F16</color>
     <color name="wine">#9F1239</color>
     <color name="rose">#BE185D</color>
     <color name="gold">#D4AF37</color>
     <color name="ink">#F8FAFC</color>
+    <color name="ink_muted">#C9B3BC</color>
 
     <color name="colorPrimary">#9F1239</color>
     <color name="colorPrimaryDark">#180B10</color>

@@ -76,7 +76,7 @@ Four layers, all runnable from the repo root:
 | `npm run test:api` | 98 requests / 303 assertions, Newman. Boots a throwaway API itself |
 | `npm run test:e2e` | 87 Playwright tests — 29 specs × desktop, iPad Mini, iPhone 13 |
 | `npm test` | all three in sequence |
-| `npm run test:mobile` | 32 Appium tests on the Android app — needs an emulator |
+| `npm run test:mobile` | 37 Appium tests on the Android app — needs an emulator |
 
 Both test suites spin up their own API against an in-memory database, so
 neither needs a running server or touches real data.
