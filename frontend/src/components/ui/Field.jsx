@@ -283,7 +283,10 @@ export const Checkbox = forwardRef(function Checkbox(
 
   return (
     <div className={cn('w-full', className)}>
-      <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5 text-sm text-slate-600">
+      <label
+        htmlFor={id}
+        className="checkbox-row flex cursor-pointer items-start gap-2.5 text-sm text-slate-600"
+      >
         <input
           ref={ref}
           id={id}

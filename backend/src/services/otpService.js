@@ -17,7 +17,21 @@ const MAX_ATTEMPTS = 5;
 const MAX_SENDS_PER_WINDOW = 5;
 const WINDOW_MINUTES = 15;
 
-const generateCode = () => String(crypto.randomInt(100000, 1000000));
+/**
+ * A fixed code where the environment already gives it away.
+ *
+ * `EXPOSE_OTP` returns the code in the response, so on such a deployment the
+ * code is not a secret and randomising it only makes automation read it back
+ * from every response. A constant lets a test send `123456` and be done.
+ * Everything else about the flow is unchanged — the code is still hashed at
+ * rest, still expires, is still single-use and still rate-limited.
+ *
+ * When EXPOSE_OTP is off — any real deployment — the code stays random.
+ */
+const STATIC_CODE = '123456';
+
+const generateCode = () =>
+  env.exposeOtp ? STATIC_CODE : String(crypto.randomInt(100000, 1000000));
 
 /**
  * Issues a code for an identifier (mobile number, or an application id for e-sign).

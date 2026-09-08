@@ -39,6 +39,14 @@ export async function getPublicProduct() {
     processingFeePct: p.processingFeePct,
     latePenaltyPct: p.latePenaltyPct,
     foreclosureChargePct: p.foreclosureChargePct,
+    /*
+     * The income floor is an eligibility criterion, not credit policy: it is
+     * a hard knock-out applied after the bureau pull, so without it the form
+     * cannot warn anyone and an applicant earning under it completes KYC and
+     * a credit check before being told. Published like the amount limits;
+     * the scoring thresholds and the risk grid stay internal.
+     */
+    minMonthlyIncome: config.underwriting.minMonthlyIncome,
   };
 }
 

@@ -108,6 +108,15 @@ export default function ApplyPage() {
       if (!form.employmentType) next.employmentType = 'Select your employment type.';
       const income = Number(form.monthlyIncome);
       if (!(income > 0)) next.monthlyIncome = 'Enter your monthly income.';
+      /*
+       * Checked here rather than left to underwriting. The income floor is a
+       * hard knock-out applied after the bureau pull, so an applicant below
+       * it used to complete KYC and a credit check before being rejected for
+       * something they typed on this step.
+       */
+      else if (product?.minMonthlyIncome && income < product.minMonthlyIncome) {
+        next.monthlyIncome = `Must be at least ${currency(product.minMonthlyIncome)} to be eligible.`;
+      }
       const emi = Number(form.existingEmi || 0);
       if (emi < 0) next.existingEmi = 'Cannot be negative.';
       else if (income > 0 && emi >= income) next.existingEmi = 'Existing EMI cannot exceed your income.';

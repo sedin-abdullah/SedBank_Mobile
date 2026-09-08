@@ -541,8 +541,7 @@
   button:not(.tap-exempt),
   [role='button']:not(.tap-exempt),
   a[data-testid]:not(.tap-exempt),
-  select:not(.tap-exempt),
-  input[type='checkbox']:not(.tap-exempt) {
+  select:not(.tap-exempt) {
     min-height: 44px;
   }
 
@@ -553,11 +552,17 @@
     min-width: 44px;
   }
 
-  /* Checkboxes stay visually small but gain a padded hit area. */
-  input[type='checkbox']:not(.tap-exempt) {
-    min-width: 44px;
-    margin-inline: -14px;
-    padding-inline: 14px;
-    background-clip: content-box;
+  /*
+   * A checkbox gets its tap area from its label, not from itself.
+   *
+   * Sizing the control to 44px and pulling it back with negative inline
+   * margins — which is what this used to do — inflates the box itself and
+   * drags it over the first word of the label. The whole label is already
+   * clickable, so giving the row a 44px minimum is both a bigger target and
+   * leaves the control at its proper 16px.
+   */
+  .checkbox-row {
+    min-height: 44px;
+    padding-block: 0.375rem;
   }
 }

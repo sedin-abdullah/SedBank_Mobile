@@ -81,31 +81,33 @@ function deriveActiveStep({
   if (isDisbursed) return 'disbursed';
 
   if (application.kyc?.status !== 'verified') return 'kyc';
-  /*
-   * Documents are optional. Without an upload the borrower still lands here
-   * first, because it is the natural next step and most people do have a
-   * payslip to hand — but choosing "continue without documents" moves them
-   * on rather than pinning them, and the panel stays available afterwards so
-   * they can still upload later.
-   */
-  if (documents.length === 0 && !documentsSkipped) return 'documents';
 
+  /*
+   * Every decided status is checked BEFORE the documents and bureau gates,
+   * because by then the flow has moved past both.
+   *
+   * Two dead ends came from getting this order wrong. An officer can approve
+   * or send back an application without anyone pulling a bureau report, which
+   * used to pin the borrower on the credit-check panel with an offer waiting
+   * behind it. And once documents became optional, an application sitting at
+   * e-Sign with nothing uploaded was pinned on the documents panel — the
+   * stepper read "Step 7 of 8" above a card headed "Step 2".
+   */
   if (status === APPLICATION_STATUS.SENT_BACK) return 'sent_back';
   if (status === APPLICATION_STATUS.IN_REVIEW) return 'in_review';
-
-  /*
-   * Decided statuses are checked BEFORE the bureau gate. An officer can
-   * approve or send back an application without anyone pulling a bureau
-   * report, and when that happened the borrower used to be pinned on the
-   * credit-check panel with an offer already waiting behind it — no way
-   * forward at all.
-   */
   if (status === APPLICATION_STATUS.OFFER_ACCEPTED) return 'esign';
   if (status === APPLICATION_STATUS.AGREEMENT_SIGNED) {
     return application.bankAccount?.verified ? 'awaiting_disbursement' : 'bank';
   }
   if (status === APPLICATION_STATUS.APPROVED) return 'offer';
 
+  /*
+   * Still pre-decision. Documents are optional: the borrower lands here first
+   * because most people do have a payslip to hand, but "continue without
+   * documents" moves them on instead of pinning them, and the panel stays
+   * available afterwards so they can still upload later.
+   */
+  if (documents.length === 0 && !documentsSkipped) return 'documents';
   if (!bureau) return 'bureau';
   return 'documents';
 }
