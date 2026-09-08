@@ -359,6 +359,29 @@ export async function refreshLoanDelinquency(loan, { policy = null, asOf = new D
 }
 
 /**
+ * Ages just one borrower's live loans.
+ *
+ * A borrower's dashboard shows their own loans, so sweeping the whole book to
+ * render it is work proportional to every other customer's data — it was
+ * taking 20s against ~15 loans and would grow linearly. The global sweep
+ * still runs on boot and on the timer, so nothing goes stale.
+ */
+export async function refreshBorrowerDelinquency(userId, { asOf = new Date() } = {}) {
+  const policy = await getPolicy();
+  const loans = await LoanAccount.find({
+    borrower: userId,
+    status: { $in: LIVE_LOAN_STATUSES },
+  });
+
+  for (const loan of loans) {
+    // eslint-disable-next-line no-await-in-loop -- a borrower has few loans
+    await refreshLoanDelinquency(loan, { policy, asOf });
+  }
+
+  return { swept: loans.length };
+}
+
+/**
  * Sweeps every live loan. Runs on boot, on a timer, and lazily before any
  * collections/dashboard read so ageing figures are never stale.
  */

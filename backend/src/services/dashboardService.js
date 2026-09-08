@@ -21,7 +21,7 @@ import {
   EMI_STATUS,
 } from '../constants/index.js';
 import { DELINQUENCY_BUCKETS, round2 } from '../utils/emi.js';
-import { refreshAllDelinquency } from './loanService.js';
+import { refreshAllDelinquency, refreshBorrowerDelinquency } from './loanService.js';
 import { getNextDue } from './paymentService.js';
 import { getRecentActivity } from './auditService.js';
 
@@ -172,7 +172,8 @@ export async function getAdminDashboard() {
 
 /** Customer dashboard: application stepper state, active loan, next EMI, ledger. */
 export async function getCustomerDashboard(userId) {
-  await refreshAllDelinquency();
+  // Only this borrower's loans — see refreshBorrowerDelinquency.
+  await refreshBorrowerDelinquency(userId);
 
   const [applications, loans, payments] = await Promise.all([
     LoanApplication.find({ applicant: userId }).sort({ createdAt: -1 }).limit(5).lean(),
