@@ -594,6 +594,66 @@ try {
     if (after !== 'overdue') throw new Error(`expected "overdue", got "${after}"`);
   });
 
+  await test('no primary action is hidden under the bottom tab bar', async () => {
+    /*
+     * Third time for this one: the tab bar is `fixed`, so it covers the last
+     * ~60px of the viewport, and a tap aimed at anything underneath is
+     * delivered to whichever tab sits there. It cost the loan form's Continue
+     * (which went to Payments) and "Run credit check" (which went to Loans).
+     * Rather than name the buttons, ask the page what would actually receive
+     * the tap at each primary action's centre.
+     */
+    await signIn(DEMO.admin);
+
+    for (const path of ['/admin', '/admin/applications', '/admin/loans', '/admin/collections']) {
+      await driver.url(`https://localhost${path}`);
+      await waitFor(TESTIDS.shell.root, 30000);
+      await driver.pause(1200);
+
+      const occluded = await driver.execute(`
+        const bar = document.querySelector('[data-testid="${TESTIDS.shell.tabBar}"]');
+        if (!bar) return [];
+        const barTop = bar.getBoundingClientRect().top;
+        const out = [];
+
+        document.querySelectorAll('button[data-testid], a[data-testid]').forEach((el) => {
+          const r = el.getBoundingClientRect();
+          // Only what is on screen and actually clickable.
+          if (r.width === 0 || r.height === 0) return;
+          if (r.top < 0 || r.top > window.innerHeight) return;
+
+          const cx = (r.left + r.right) / 2;
+          const cy = (r.top + r.bottom) / 2;
+          const hit = document.elementFromPoint(cx, cy);
+          if (!hit) return;
+
+          // The tap is fine if it lands on the control or inside it.
+          if (el === hit || el.contains(hit) || hit.contains(el)) return;
+
+          const stealer = hit.closest('[data-testid]');
+          const id = stealer && stealer.getAttribute('data-testid');
+          if (id && id.startsWith('app-tab-')) {
+            out.push({
+              control: el.getAttribute('data-testid'),
+              stolenBy: id,
+              bottom: Math.round(r.bottom),
+              barTop: Math.round(barTop),
+            });
+          }
+        });
+
+        return out;
+      `);
+
+      if (occluded.length) {
+        throw new Error(
+          `${path}: the tab bar would receive taps meant for ` +
+            occluded.map((o) => `${o.control} (bottom ${o.bottom} vs bar ${o.barTop}, stolen by ${o.stolenBy})`).join('; ')
+        );
+      }
+    }
+  });
+
   await test('a wide table scrolls inside its card instead of being clipped', async () => {
     await driver.url('https://localhost/admin/loans');
     await waitFor(TESTIDS.adminLoans.table, 30000);

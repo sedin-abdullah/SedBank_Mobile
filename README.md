@@ -43,7 +43,7 @@ npm run test:unit    # 46 Jest tests — EMI maths, underwriting rules
 npm run test:api     # 303 assertions over 98 requests (Newman)
 npm run test:e2e     # 93 Playwright tests across desktop, tablet and phone
 npm test             # all three
-npm run test:mobile  # 37 Appium tests on the Android app (needs an emulator)
+npm run test:mobile  # 38 Appium tests on the Android app (needs an emulator)
 ```
 
 Both integration suites boot their own throwaway API, so nothing needs to be

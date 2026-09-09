@@ -191,7 +191,7 @@ is worth knowing that no amount of JS defensiveness would have caught it.
 ## Tests
 
 ```bash
-npm run test:mobile      # 37 Appium tests on a running Android emulator
+npm run test:mobile      # 38 Appium tests on a running Android emulator
 ```
 
 Appium 3 with the UiAutomator2 driver, driving the app through the
@@ -205,7 +205,11 @@ the KYC camera control, the manifest permission, keyboard offset,
 pause-on-background, and the `perf-lite` path — which is asserted to remove a
 `backdrop-filter` that was measurably there first, so it cannot pass vacuously.
 
-Prerequisites: an Appium server on `127.0.0.1:4723`, an emulator or device on
+Prerequisites: an Appium server on `127.0.0.1:4723` started with
+`--relaxed-security` (two tests use `mobile: shell` to set the IME and read
+`dumpsys`; without the flag they fail with *"Potentially insecure feature
+'adb_shell' has not been enabled"* — note that Appium Inspector starts its own
+server without it), an emulator or device on
 `adb devices`, `ANDROID_HOME` set, and the APK installed. The suite forces a
 cold launch, clears any stored session and wakes the API itself, so runs are
 repeatable without manual setup.

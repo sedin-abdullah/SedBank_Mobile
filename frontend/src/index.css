@@ -56,6 +56,24 @@
     background-color: theme('colors.canvas.DEFAULT');
   }
 
+  /**
+   * The bottom tab bar is `fixed`, so it covers the last ~60px of the
+   * viewport — but nothing tells the browser that strip is obscured. Every
+   * scroll therefore treats it as visible space: `scrollIntoView` stops with
+   * the element behind the bar, and a tap aimed at the element is delivered
+   * to whichever tab sits under it. "Run credit check" spans y808-852 against
+   * a bar starting at y820, dead centre, so it navigated to Loans.
+   *
+   * scroll-padding-bottom declares the obscured strip once, for every scroll
+   * the app or the browser performs — including the one that brings a focused
+   * field into view. Below `lg` only, which is where the bar exists.
+   */
+  @media (max-width: 1023px) {
+    html {
+      scroll-padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 0.5rem);
+    }
+  }
+
   body {
     @apply bg-canvas text-slate-900 antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
