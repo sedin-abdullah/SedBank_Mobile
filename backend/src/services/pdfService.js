@@ -333,7 +333,7 @@ export async function buildSchedulePdf({ loan, borrower, schedule }) {
     { font: 'bold' }
   );
 
-  b.finish(`${FOOTER}  Generated ${dayjs().format('DD MMM YYYY HH:mm')}.`);
+  b.finish(FOOTER);
   return Buffer.from(await b.doc.save());
 }
 
@@ -426,7 +426,7 @@ export async function buildStatementPdf({ loan, borrower, schedule, payments }) 
     );
   }
 
-  b.finish(`${FOOTER}  Generated ${dayjs().format('DD MMM YYYY HH:mm')}.`);
+  b.finish(FOOTER);
   return Buffer.from(await b.doc.save());
 }
 
@@ -485,7 +485,7 @@ export async function buildNocPdf({ loan, borrower }) {
     color: MUTED,
   });
 
-  b.finish(`${FOOTER}  Issued ${dayjs().format('DD MMM YYYY HH:mm')}.`);
+  b.finish(FOOTER);
   return Buffer.from(await b.doc.save());
 }
 
