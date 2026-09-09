@@ -258,7 +258,7 @@ runner.
 - **`npx cap doctor`** checks the native project against the installed plugins.
 - **`./gradlew clean`** when a build behaves impossibly; stale Capacitor assets
   are the usual cause.
-- **`npm run test:mobile`** runs the 32 Appium tests against an emulator with the
+- **`npm run test:mobile`** runs the 38 Appium tests against an emulator with the
   APK installed. See [MOBILE.md](MOBILE.md#tests).
 
 ### OTA updates
