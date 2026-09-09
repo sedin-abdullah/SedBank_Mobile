@@ -202,6 +202,11 @@ export const TESTIDS = {
     status: 'customer-application-detail-status',
     stepper: 'customer-application-detail-stepper',
     summary: 'customer-application-detail-summary',
+    // Also rendered in the summary list, where the value has an element of
+    // its own: a heading and a badge are collapsed into their parent's node
+    // by Chromium, so neither is addressable from native automation.
+    summaryNumber: 'customer-application-summary-number',
+    summaryStatus: 'customer-application-summary-status',
     timeline: 'customer-application-detail-timeline',
     withdraw: 'customer-application-withdraw-btn',
     remarks: 'customer-application-detail-remarks',

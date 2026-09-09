@@ -478,12 +478,24 @@ export function PageHeader({ title, subtitle, actions, breadcrumb, className }) 
     <div className={cn('mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between', className)}>
       <div className="min-w-0">
         {breadcrumb ? (
-          <div data-testid={TESTIDS.shell.breadcrumb} className="mb-1 text-xs text-slate-500">
+          <div
+            data-testid={TESTIDS.shell.breadcrumb}
+            id={TESTIDS.shell.breadcrumb}
+            className="mb-1 text-xs text-slate-500"
+          >
             {breadcrumb}
           </div>
         ) : null}
+        {/*
+          The id makes this the addressable node for whatever the page is
+          about — an application or loan number, usually. Chromium collapses a
+          heading into a single accessibility node carrying all of its text,
+          so a <span> nested inside gets no node of its own however it is
+          styled or labelled; the heading is the element to read.
+        */}
         <h1
           data-testid={TESTIDS.shell.pageTitle}
+          id={TESTIDS.shell.pageTitle}
           className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl"
         >
           {title}

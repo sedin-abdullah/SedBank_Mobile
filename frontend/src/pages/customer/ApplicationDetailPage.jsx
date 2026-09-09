@@ -6,7 +6,7 @@
  * credit check -> offer -> e-sign -> payout account -> awaiting disbursement.
  * Terminal states (rejected, disbursed, withdrawn) get their own panel.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -111,6 +111,45 @@ function deriveActiveStep({
   if (!bureau) return 'bureau';
   return 'documents';
 }
+
+/**
+ * Brings the active step's panel into view whenever the step changes.
+ *
+ * The page stacks several cards, so the one action a borrower needs is often
+ * below the fold — and an element off screen is not in Android's
+ * accessibility tree at all, so a native runner cannot find it to scroll to.
+ * Remounted on every step change via `key`, which is what makes the effect
+ * fire again.
+ *
+ * The scroll is instant rather than smooth on purpose: a panel still gliding
+ * when a tap lands is how a tap ends up on whatever was underneath.
+ */
+function ScrollToActiveStep({ target }) {
+  useEffect(() => {
+    if (!target) return;
+    const panel = document.querySelector(`[data-testid="${target}"]`);
+    /*
+     * `nearest` scrolls only when the panel is actually out of view. `start`
+     * would pull it to the top every time, pushing the page header — and the
+     * application number on it — off screen, and an off-screen element is not
+     * in the accessibility tree at all.
+     */
+    panel?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+  }, [target]);
+
+  return null;
+}
+
+/** Which panel belongs to each step of the journey. */
+const STEP_PANEL = {
+  kyc: TESTIDS.applicationDetail.kycSection,
+  documents: TESTIDS.applicationDetail.documentsSection,
+  sent_back: TESTIDS.applicationDetail.documentsSection,
+  bureau: TESTIDS.applicationDetail.bureauSection,
+  offer: TESTIDS.applicationDetail.offerSection,
+  esign: TESTIDS.applicationDetail.esignSection,
+  bank: TESTIDS.applicationDetail.bankSection,
+};
 
 export default function ApplicationDetailPage() {
   const { id } = useParams();
@@ -361,6 +400,8 @@ export default function ApplicationDetailPage() {
 
   return (
     <div data-testid={TESTIDS.applicationDetail.root}>
+      <ScrollToActiveStep key={activeStep} target={STEP_PANEL[activeStep]} />
+
       <PageHeader
         breadcrumb={
           <Link to="/app/applications" className="hover:text-slate-700">
@@ -1103,6 +1144,17 @@ export default function ApplicationDetailPage() {
             <CardHeader title="Application summary" />
             <CardBody>
               <DataGrid columns={2}>
+                <DataItem
+                  label="Application number"
+                  value={application.applicationNo}
+                  testId={TESTIDS.applicationDetail.summaryNumber}
+                  mono
+                />
+                <DataItem
+                  label="Status"
+                  value={titleCase(status)}
+                  testId={TESTIDS.applicationDetail.summaryStatus}
+                />
                 <DataItem label="Requested" value={currency(application.amountRequested)} />
                 <DataItem label="Tenure" value={`${application.tenureRequested} months`} />
                 <DataItem label="Purpose" value={titleCase(application.purpose)} />
