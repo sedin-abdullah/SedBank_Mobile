@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import mongoose from 'mongoose';
 
 import ApiError from './utils/ApiError.js';
 import env from './config/env.js';
@@ -61,6 +62,29 @@ export function createApp() {
    * GET /api/documents/:id/file, which checks ownership first. The old mount
    * handed any file to anyone who knew its name — wrong for income proofs.
    */
+
+  /**
+   * Readiness probe for waking the free-tier service before a demo.
+   *
+   * Distinct from `/api/health` below, which is a pure liveness check: it
+   * answers as soon as Express is up and deliberately touches nothing, and
+   * Render's healthCheckPath depends on that. This one also pings Mongo, so a
+   * single request warms the web service *and* the database connection — the
+   * two things that are cold after Render idles the instance.
+   *
+   * `ping` runs against the connected database rather than `admin`, so it
+   * needs no elevated rights on Atlas. Before the connection is up,
+   * `connection.db` is undefined and the throw lands in the catch, which is
+   * the honest answer: the server is listening but not ready.
+   */
+  app.get('/health', async (_req, res) => {
+    try {
+      await mongoose.connection.db.command({ ping: 1 });
+      res.type('text/plain').send('OK');
+    } catch {
+      res.status(500).type('text/plain').send('Database unavailable');
+    }
+  });
 
   /** Liveness probe — also the endpoint UptimeRobot pings to keep Render awake. */
   app.get('/api/health', (_req, res) =>
