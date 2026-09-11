@@ -5,7 +5,7 @@ needed) or by a **local Android toolchain**. The repo is configured for both.
 
 | | |
 |---|---|
-| Download the current APK | [Releases](https://github.com/sedin-abdullah/SedBank_Mobile/releases/latest) |
+| Download the current APK | [Releases](https://github.com/SedDemo/Sed_Bank/releases/latest) |
 | Build one without installing anything | Actions → **Android APK** → *Run workflow* |
 | Build one locally | [Android APK](#android-apk-installable-shareable) below |
 

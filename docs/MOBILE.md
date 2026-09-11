@@ -7,7 +7,7 @@ holds by construction rather than by discipline.
 
 ## Download it
 
-[**SedBank-v1.0.0-debug.apk**](https://github.com/sedin-abdullah/SedBank_Mobile/releases/download/v1.0.0-android/SedBank-v1.0.0-debug.apk)
+[**SedBank-v1.0.0-debug.apk**](https://github.com/SedDemo/Sed_Bank/releases/download/v1.0.0-android/SedBank-v1.0.0-debug.apk)
 — open it on the phone and allow the install when Android asks. Sign in with any
 account from [CREDENTIALS.md](CREDENTIALS.md).
 
