@@ -373,10 +373,17 @@ export async function refreshBorrowerDelinquency(userId, { asOf = new Date() } =
     status: { $in: LIVE_LOAN_STATUSES },
   });
 
-  for (const loan of loans) {
-    // eslint-disable-next-line no-await-in-loop -- a borrower has few loans
-    await refreshLoanDelinquency(loan, { policy, asOf });
-  }
+  /*
+   * Concurrently, unlike the global sweep below.
+   *
+   * Each refresh fetches that loan's whole schedule and writes back, so done
+   * one at a time it cost ~600ms per loan on the borrower's dashboard — 1.2s
+   * with no loans against 3.6s with four. The sweep is serial to keep memory
+   * flat across every loan in the system; a single borrower holds a handful,
+   * so there is nothing to protect against here and every reason not to pay
+   * the round trips in sequence.
+   */
+  await Promise.all(loans.map((loan) => refreshLoanDelinquency(loan, { policy, asOf })));
 
   return { swept: loans.length };
 }
