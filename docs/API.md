@@ -1,6 +1,6 @@
 # API reference
 
-`79` endpoints. Base URL is the API origin — `http://localhost:5001` locally,
+`81` endpoints. Base URL is the API origin — `http://localhost:5001` locally,
 `https://sedbank-api.onrender.com` deployed.
 
 Every response uses the same envelope:
@@ -23,6 +23,21 @@ Named roles are enforced server-side; `Admin` passes every staff check.
 *Generated from `backend/src/routes/index.js`, which is the single place the whole
 access model is declared.*
 
+
+## Health
+
+| Method | Endpoint | Access |
+|---|---|---|
+| `GET` | `/health` | **Public** |
+| `GET` | `/api/health` | **Public** |
+
+`/api/health` is a liveness check: it answers as soon as Express is up and
+touches nothing, which is what Render's `healthCheckPath` needs.
+
+`/health` also pings MongoDB, so one call warms the web service *and* the
+database — the two things that are cold after Render idles a free-tier
+instance. It returns plain `OK` with 200, or `Database unavailable` with 500 if
+the ping fails or the connection is not up yet. Hit it before a demo.
 
 ## Authentication
 
