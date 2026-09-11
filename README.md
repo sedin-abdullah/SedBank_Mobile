@@ -14,7 +14,7 @@ integration is simulated; no real financial or personal data is processed.
 |---|---|
 | [docs/FLOW.md](docs/FLOW.md) | The end-to-end journey, step by step, with the underwriting rules |
 | [docs/CREDENTIALS.md](docs/CREDENTIALS.md) | The five demo logins and what each role can do |
-| [docs/API.md](docs/API.md) | All 79 endpoints with their access rules |
+| [docs/API.md](docs/API.md) | All 81 endpoints with their access rules |
 | [docs/TECH_STACK.md](docs/TECH_STACK.md) | Architecture, libraries, testing, deployment |
 | [docs/MOBILE.md](docs/MOBILE.md) | The Android app — building it, and what is mobile-specific |
 
